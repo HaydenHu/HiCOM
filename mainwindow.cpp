@@ -4,6 +4,7 @@
 #include <QSerialPort>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QFontDatabase>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -62,6 +63,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(timSend, &QTimer::timeout, this, [=](){
         on_sendBt_clicked();
     });
+    initRecvTextEdit();//初始化接收区
 }
 
 MainWindow::~MainWindow()
@@ -135,7 +137,7 @@ void MainWindow::manual_serialPortReadyRead()
 
         }
     }
-    ui->recvEdit->insertPlainText(str_rev);
+    ui->recvEdit->insertPlainText(str_rev.toUtf8());
     ui->recvEdit->moveCursor(QTextCursor::End);
 
 }
@@ -251,7 +253,7 @@ void MainWindow::on_sendBt_clicked()
         array = QByteArray::fromHex(ui->sendEdit->toPlainText().toUtf8()).data();
     }else{
         //array = data.toLatin1();    //ASCII
-        array = ui->sendEdit->toPlainText().toLocal8Bit().data();
+        array = ui->sendEdit->toPlainText().toUtf8().data();
     }
 
     if(ui->chk_send_line->checkState() == Qt::Checked){
@@ -314,4 +316,15 @@ void MainWindow::on_chkTimSend_stateChanged(int arg1)
             QMessageBox::critical(this, "错误提示", "定时发送的最小间隔为 10ms\r\n请确保输入的值 >=10");
         }
     }
+}
+void MainWindow::initRecvTextEdit()
+{
+    int emojiFontid=QFontDatabase::addApplicationFont(":/font/NotoColorEmoji_WindowsCompatible.ttf");
+    QString emojiFontFamily=QFontDatabase::applicationFontFamilies(emojiFontid).at(0);
+    QFont textFont;
+    textFont.setPointSize(11);
+    textFont.setStyleName(emojiFontFamily);
+    ui->recvEdit->setFont(textFont);
+    ui->recvEdit->setAcceptRichText(true);
+    // ui->recvEdit->
 }

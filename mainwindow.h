@@ -41,6 +41,8 @@ private slots:
 
     void on_btnSerialCheck_clicked();
 
+    void initRecvTextEdit();
+
 private:
     Ui::MainWindow *ui;
 

@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>image/logo64.ico</file>
         <file>image/logo128.ico</file>
+        <file>font/NotoColorEmoji_WindowsCompatible.ttf</file>
     </qresource>
 </RCC>

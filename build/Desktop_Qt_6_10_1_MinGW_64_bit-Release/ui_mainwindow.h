@@ -376,6 +376,7 @@ public:
 
         textBrowser = new QTextBrowser(tab_2);
         textBrowser->setObjectName("textBrowser");
+        textBrowser->setOpenExternalLinks(true);
 
         verticalLayout_7->addWidget(textBrowser);
 
@@ -394,7 +395,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(1);
         baundrateCb->setCurrentIndex(6);
         databitCb->setCurrentIndex(3);
         checkbitCb->setCurrentIndex(0);
@@ -463,7 +464,11 @@ public:
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0p"
                         "x; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:16pt; font-weight:700;\">B\347\253\231:\346\236\201\345\256\242\345\244\247\350\204\221</span></p>\n"
 "<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:16pt; font-weight:700;\"><br /></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><img src=\":/image/logo128.ico\" /></p></body></html>", nullptr));
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><img src=\":/image/logo128.ico\" /></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Emoji\350\241\250\346\203\205\345\244\215\345\210\266\347\253\231\357\274\232<a href=\"https://emoji8.com/zh-hans/\"><span style=\" text-decoration: underline; color:#27bf73;\">Emoji\350\241\250\346\203\205\345\244\247\345\205\250\345\217\257\345\244\215\345\210\266 - Emoji8</span></a></p>\n"
+"<p align=\"center\" style=\"-"
+                        "qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:14pt;\">\345\274\200\346\272\220\344\273\223\345\272\223\357\274\232</span><a href=\"https://github.com/HaydenHu/HiCOM\"><span style=\" text-decoration: underline; color:#27bf73;\">https://github.com/HaydenHu/HiCOM</span></a></p></body></html>", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("MainWindow", "\345\205\263\344\272\216", nullptr));
     } // retranslateUi
 

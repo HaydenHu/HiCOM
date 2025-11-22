@@ -108,6 +108,7 @@ compiler_rcc_clean:
 	-$(DEL_FILE) debug\qrc_res.cpp
 debug/qrc_res.cpp: ../../res.qrc \
 		D:/Qt/6.10.1/mingw_64/bin/rcc.exe \
+		../../font/NotoColorEmoji_WindowsCompatible.ttf \
 		../../image/logo64.ico \
 		../../image/logo128.ico
 	D:\Qt\6.10.1\mingw_64\bin\rcc.exe -name res --no-zstd ..\..\res.qrc -o debug\qrc_res.cpp
@@ -865,7 +866,9 @@ debug/mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 		D:/Qt/6.10.1/mingw_64/include/QtWidgets/QWidget \
 		D:/Qt/6.10.1/mingw_64/include/QtCore/QDateTime \
 		D:/Qt/6.10.1/mingw_64/include/QtCore/qdatetime.h \
-		D:/Qt/6.10.1/mingw_64/include/QtCore/qcalendar.h
+		D:/Qt/6.10.1/mingw_64/include/QtCore/qcalendar.h \
+		D:/Qt/6.10.1/mingw_64/include/QtGui/QFontDatabase \
+		D:/Qt/6.10.1/mingw_64/include/QtGui/qfontdatabase.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\mainwindow.o ..\..\mainwindow.cpp
 
 debug/qrc_res.o: debug/qrc_res.cpp 
