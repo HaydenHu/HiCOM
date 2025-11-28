@@ -208,8 +208,8 @@ void SerialPortWorker::watchdogTimeout() {
     }
 
     if (QDateTime::currentMSecsSinceEpoch() - m_lastActiveTime > kWatchdogSilentMs) {
-        emit infoMessage(QStringLiteral("Watchdog: no activity, restarting port"));
-        restartPort();
+        // Do not restart or log just for idleness; rely on error handling to recover.
+        return;
     }
 }
 

@@ -35,3 +35,5 @@ RC_ICONS = .\image\logo64.ico          # logo.ico是你图片的文件名
 
 # 启用控制台输出以便查看调试信息
 CONFIG += console
+
+DEFINES += ENABLE_DEBUG_LOG=0
