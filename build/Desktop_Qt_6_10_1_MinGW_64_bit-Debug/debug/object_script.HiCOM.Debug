@@ -4,8 +4,10 @@ debug/ringbuffer.o
 debug/serialportworker.o
 debug/qcustomplot.o
 debug/waveformworker.o
+debug/attitudeworker.o
 debug/qrc_res.o
 debug/moc_mainwindow.o
 debug/moc_serialportworker.o
 debug/moc_qcustomplot.o
 debug/moc_waveformworker.o
+debug/moc_attitudeworker.o

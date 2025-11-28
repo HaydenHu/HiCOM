@@ -22,6 +22,17 @@
 #include <QTextStream>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QStackedLayout>
+#include <Qt3DCore/QEntity>
+#include <Qt3DExtras/Qt3DWindow>
+#include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DExtras/QCuboidMesh>
+#include <Qt3DExtras/QConeMesh>
+#include <Qt3DExtras/QCylinderMesh>
+#include <Qt3DExtras/QOrbitCameraController>
+#include <Qt3DCore/QTransform>
+#include <Qt3DRender/QCamera>
+#include <Qt3DExtras/QForwardRenderer>
 #include <algorithm>
 
 #ifndef ENABLE_DEBUG_LOG
@@ -128,6 +139,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serialWorker, &SerialPortWorker::infoMessage,
             this, [this](const QString& msg) { appendDebug(msg); }, Qt::QueuedConnection);
 
+    // Attitude worker thread for 3D display
+    m_attThread = new QThread(this);
+    m_attWorker = new AttitudeWorker;
+    m_attWorker->moveToThread(m_attThread);
+    connect(m_attWorker, &AttitudeWorker::attitudeReady,
+            this, &MainWindow::updateAttitude, Qt::QueuedConnection);
+    m_attThread->start();
+
     // waveform worker/thread
     m_waveThread = new QThread(this);
     m_waveWorker = new WaveformWorker;
@@ -149,6 +168,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->btnSerialCheck->setText(QString::fromUtf8(u8"保存记录"));
     connect(ui->btnSerialCheck, &QPushButton::clicked, this, [this]() { saveLogs(); });
+
+    setup3DTab();
 }
 
 MainWindow::~MainWindow()
@@ -159,6 +180,11 @@ MainWindow::~MainWindow()
     if (m_serialThread) {
         m_serialThread->quit();
         m_serialThread->wait();
+    }
+    if (m_attThread) {
+        m_attThread->quit();
+        m_attThread->wait();
+        delete m_attWorker;
     }
     if (m_waveThread) {
         m_waveThread->quit();
@@ -260,6 +286,33 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     // forward to waveform worker
     if (m_waveWorker) {
         QMetaObject::invokeMethod(m_waveWorker, "appendData", Qt::QueuedConnection, Q_ARG(QByteArray, packet));
+    }
+    // 3D姿态：先在标签显示原始文本，方便排查；若能解析则再发给姿态线程
+    if (m_attLabel) {
+        QString raw = decodeTextSmart(packet).trimmed();
+        if (raw.isEmpty()) {
+            // Keep previous display if nothing meaningful arrived
+        } else {
+            if (raw.size() > 80) raw = raw.left(77) + "...";
+            // If raw looks like comma separated, format as Roll/Pitch/Yaw
+            const QStringList parts = raw.split(QRegularExpression(QStringLiteral("[,\\s]+")),
+                                                Qt::SkipEmptyParts);
+            if (parts.size() >= 3) {
+                m_attLabel->setText(QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
+                                        .arg(parts.at(0))
+                                        .arg(parts.at(1))
+                                        .arg(parts.at(2)));
+            } else {
+                m_attLabel->setText(raw);
+            }
+        }
+    }
+    if (m_attWorker) {
+        double r, p, y;
+        if (tryParseAttitude(packet, r, p, y)) {
+            QMetaObject::invokeMethod(m_attWorker, "appendAttitude", Qt::QueuedConnection,
+                                      Q_ARG(double, r), Q_ARG(double, p), Q_ARG(double, y));
+        }
     }
 
     m_rxBytes += packet.size();
@@ -599,4 +652,128 @@ void MainWindow::updateWaveform(const QVector<QPointF> &points)
         }
     }
     m_wavePlot->replot(QCustomPlot::rpQueuedReplot);
+}
+
+void MainWindow::setup3DTab()
+{
+    m_tab3d = ui->tabWidget->findChild<QWidget*>("tab_3D");
+    if (!m_tab3d) {
+        return;
+    }
+
+    QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(m_tab3d->layout());
+    if (!layout) {
+        layout = new QVBoxLayout(m_tab3d);
+        layout->setContentsMargins(0, 0, 0, 0);
+        m_tab3d->setLayout(layout);
+    } else {
+        while (QLayoutItem *item = layout->takeAt(0)) {
+            if (QWidget *w = item->widget()) w->deleteLater();
+            delete item;
+        }
+    }
+
+    m_3dWindow = new Qt3DExtras::Qt3DWindow;
+    m_3dWindow->defaultFrameGraph()->setClearColor(QColor(30, 30, 35));
+    m_3dRoot = new Qt3DCore::QEntity;
+
+    auto cam = m_3dWindow->camera();
+    cam->lens()->setPerspectiveProjection(45.0f, 16.0f/9.0f, 0.1f, 1000.0f);
+    cam->setPosition(QVector3D(0.0f, 0.0f, 12.0f));
+    cam->setViewCenter(QVector3D(0, 0, 0));
+
+    auto camController = new Qt3DExtras::QOrbitCameraController(m_3dRoot);
+    camController->setCamera(cam);
+    camController->setLinearSpeed(50.0f);
+    camController->setLookSpeed(180.0f);
+
+    // Simple airplane-like model
+    m_modelEntity = new Qt3DCore::QEntity(m_3dRoot);
+    auto bodyMesh = new Qt3DExtras::QCuboidMesh;
+    bodyMesh->setXExtent(1.0f);
+    bodyMesh->setYExtent(0.3f);
+    bodyMesh->setZExtent(3.0f);
+    auto bodyMaterial = new Qt3DExtras::QPhongMaterial;
+    bodyMaterial->setDiffuse(QColor(80, 180, 255));
+    m_modelTransform = new Qt3DCore::QTransform;
+    m_modelTransform->setRotation(QQuaternion::fromEulerAngles(0, 0, 0));
+    m_modelEntity->addComponent(bodyMesh);
+    m_modelEntity->addComponent(bodyMaterial);
+    m_modelEntity->addComponent(m_modelTransform);
+
+    auto wingEntity = new Qt3DCore::QEntity(m_modelEntity);
+    auto wingMesh = new Qt3DExtras::QCuboidMesh;
+    wingMesh->setXExtent(4.0f);
+    wingMesh->setYExtent(0.1f);
+    wingMesh->setZExtent(0.5f);
+    auto wingTransform = new Qt3DCore::QTransform;
+    wingTransform->setTranslation(QVector3D(0, 0, 0));
+    wingEntity->addComponent(wingMesh);
+    wingEntity->addComponent(wingTransform);
+    wingEntity->addComponent(bodyMaterial);
+
+    auto tailEntity = new Qt3DCore::QEntity(m_modelEntity);
+    auto tailMesh = new Qt3DExtras::QCuboidMesh;
+    tailMesh->setXExtent(1.0f);
+    tailMesh->setYExtent(0.1f);
+    tailMesh->setZExtent(0.8f);
+    auto tailTransform = new Qt3DCore::QTransform;
+    tailTransform->setTranslation(QVector3D(0, 0.2f, -1.5f));
+    tailEntity->addComponent(tailMesh);
+    tailEntity->addComponent(tailTransform);
+    tailEntity->addComponent(bodyMaterial);
+
+    auto vtailEntity = new Qt3DCore::QEntity(m_modelEntity);
+    auto vtailMesh = new Qt3DExtras::QCuboidMesh;
+    vtailMesh->setXExtent(0.2f);
+    vtailMesh->setYExtent(0.8f);
+    vtailMesh->setZExtent(0.2f);
+    auto vtailTransform = new Qt3DCore::QTransform;
+    vtailTransform->setTranslation(QVector3D(0, 0.5f, -1.5f));
+    vtailEntity->addComponent(vtailMesh);
+    vtailEntity->addComponent(vtailTransform);
+    vtailEntity->addComponent(bodyMaterial);
+
+    m_3dWindow->setRootEntity(m_3dRoot);
+
+    // Label条放在上方，保证不被 createWindowContainer 遮挡
+    m_attLabel = new QLabel(QString::fromUtf8(u8"Roll: 0   Pitch: 0   Yaw: 0"), m_tab3d);
+    m_attLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_attLabel->setMinimumHeight(24);
+    m_attLabel->setStyleSheet("color: #f0f0f0; background-color: rgba(0,0,0,120); padding:4px; font-weight:600;");
+
+    m_3dContainer = QWidget::createWindowContainer(m_3dWindow, m_tab3d);
+    m_3dContainer->setFocusPolicy(Qt::StrongFocus);
+
+    layout->addWidget(m_attLabel, 0);
+    layout->addWidget(m_3dContainer, 1);
+}
+
+void MainWindow::updateAttitude(double rollDeg, double pitchDeg, double yawDeg)
+{
+    if (!m_modelTransform) return;
+    QQuaternion q = QQuaternion::fromEulerAngles(pitchDeg, yawDeg, rollDeg);
+    m_modelTransform->setRotation(q);
+    if (m_attLabel) {
+        m_attLabel->setText(QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
+                                .arg(QString::number(rollDeg, 'f', 1))
+                                .arg(QString::number(pitchDeg, 'f', 1))
+                                .arg(QString::number(yawDeg, 'f', 1)));
+    }
+}
+
+bool MainWindow::tryParseAttitude(const QByteArray &packet, double &roll, double &pitch, double &yaw) const
+{
+    QString str = QString::fromUtf8(packet).trimmed();
+    const QStringList parts = str.split(',', Qt::SkipEmptyParts);
+    if (parts.size() != 3) return false;
+    bool ok1=false, ok2=false, ok3=false;
+    double r = parts[0].toDouble(&ok1);
+    double p = parts[1].toDouble(&ok2);
+    double y = parts[2].toDouble(&ok3);
+    if (!(ok1 && ok2 && ok3)) return false;
+    roll = r;
+    pitch = p;
+    yaw = y;
+    return true;
 }

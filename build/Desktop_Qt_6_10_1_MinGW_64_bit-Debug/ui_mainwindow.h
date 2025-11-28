@@ -78,15 +78,16 @@ public:
     QHBoxLayout *horizontalLayout_8;
     QTextEdit *sendEdit;
     QPushButton *sendBt;
+    QWidget *tab_waveform;
+    QVBoxLayout *verticalLayout_wave;
+    QLabel *wavePlaceholder;
+    QWidget *tab_3D;
     QWidget *tab_2;
     QVBoxLayout *verticalLayout_7;
     QLabel *label_6;
     QLabel *label_8;
     QLabel *label_7;
     QTextBrowser *textBrowser;
-    QWidget *tab_waveform;
-    QVBoxLayout *verticalLayout_wave;
-    QLabel *wavePlaceholder;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -356,6 +357,20 @@ public:
         horizontalLayout_10->addLayout(verticalLayout_6);
 
         tabWidget->addTab(tab, QString());
+        tab_waveform = new QWidget();
+        tab_waveform->setObjectName("tab_waveform");
+        verticalLayout_wave = new QVBoxLayout(tab_waveform);
+        verticalLayout_wave->setObjectName("verticalLayout_wave");
+        wavePlaceholder = new QLabel(tab_waveform);
+        wavePlaceholder->setObjectName("wavePlaceholder");
+        wavePlaceholder->setAlignment(Qt::AlignmentFlag::AlignCenter);
+
+        verticalLayout_wave->addWidget(wavePlaceholder);
+
+        tabWidget->addTab(tab_waveform, QString());
+        tab_3D = new QWidget();
+        tab_3D->setObjectName("tab_3D");
+        tabWidget->addTab(tab_3D, QString());
         tab_2 = new QWidget();
         tab_2->setObjectName("tab_2");
         verticalLayout_7 = new QVBoxLayout(tab_2);
@@ -385,17 +400,6 @@ public:
         verticalLayout_7->addWidget(textBrowser);
 
         tabWidget->addTab(tab_2, QString());
-        tab_waveform = new QWidget();
-        tab_waveform->setObjectName("tab_waveform");
-        verticalLayout_wave = new QVBoxLayout(tab_waveform);
-        verticalLayout_wave->setObjectName("verticalLayout_wave");
-        wavePlaceholder = new QLabel(tab_waveform);
-        wavePlaceholder->setObjectName("wavePlaceholder");
-        wavePlaceholder->setAlignment(Qt::AlignmentFlag::AlignCenter);
-
-        verticalLayout_wave->addWidget(wavePlaceholder);
-
-        tabWidget->addTab(tab_waveform, QString());
 
         horizontalLayout_9->addWidget(tabWidget);
 
@@ -463,6 +467,9 @@ public:
         chk_send_line->setText(QCoreApplication::translate("MainWindow", "\345\217\221\351\200\201\346\226\260\350\241\214", nullptr));
         sendBt->setText(QCoreApplication::translate("MainWindow", "\345\217\221\351\200\201", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("MainWindow", "\344\270\262\345\217\243", nullptr));
+        wavePlaceholder->setText(QCoreApplication::translate("MainWindow", "\346\263\242\345\275\242\345\260\206\345\234\250\350\277\220\350\241\214\346\227\266\346\230\276\347\244\272", nullptr));
+        tabWidget->setTabText(tabWidget->indexOf(tab_waveform), QCoreApplication::translate("MainWindow", "\346\263\242\345\275\242", nullptr));
+        tabWidget->setTabText(tabWidget->indexOf(tab_3D), QCoreApplication::translate("MainWindow", "3D", nullptr));
         label_6->setText(QCoreApplication::translate("MainWindow", "\345\237\272\344\272\216Qt\344\270\216C++\347\232\204\350\207\252\347\224\250\344\270\262\345\217\243\345\212\251\346\211\213HiCOM", nullptr));
         label_8->setText(QCoreApplication::translate("MainWindow", "\347\211\210\346\234\254\357\274\2321.0", nullptr));
         label_7->setText(QCoreApplication::translate("MainWindow", "\344\275\234\350\200\205\357\274\232Hayden", nullptr));
@@ -485,8 +492,6 @@ public:
                         "qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:14pt;\">\345\274\200\346\272\220\344\273\223\345\272\223\357\274\232</span><a href=\"https://github.com/HaydenHu/HiCOM\"><span style=\" text-decoration: underline; color:#27bf73;\">https://github.com/HaydenHu/HiCOM</span></a></p></body></html>", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("MainWindow", "\345\205\263\344\272\216", nullptr));
-        wavePlaceholder->setText(QCoreApplication::translate("MainWindow", "\346\263\242\345\275\242\345\260\206\345\234\250\350\277\220\350\241\214\346\227\266\346\230\276\347\244\272", nullptr));
-        tabWidget->setTabText(tabWidget->indexOf(tab_waveform), QCoreApplication::translate("MainWindow", "\346\263\242\345\275\242", nullptr));
     } // retranslateUi
 
 };

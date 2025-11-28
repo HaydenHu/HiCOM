@@ -1,4 +1,4 @@
-QT       += core gui serialport printsupport
+QT       += core gui serialport printsupport 3dcore 3drender 3dinput 3dextras 3dlogic
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -15,7 +15,8 @@ SOURCES += \
     ringbuffer.cpp \
     serialportworker.cpp \
     qcustomplot/qcustomplot.cpp \
-    waveformworker.cpp
+    waveformworker.cpp \
+    attitudeworker.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -23,7 +24,8 @@ HEADERS += \
     ringbuffer.h \
     serialportworker.h \
     qcustomplot/qcustomplot.h \
-    waveformworker.h
+    waveformworker.h \
+    attitudeworker.h
 
 FORMS += \
     mainwindow.ui

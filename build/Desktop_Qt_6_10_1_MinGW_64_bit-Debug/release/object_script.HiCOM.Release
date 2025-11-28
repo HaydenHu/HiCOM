@@ -4,8 +4,10 @@ release/ringbuffer.o
 release/serialportworker.o
 release/qcustomplot.o
 release/waveformworker.o
+release/attitudeworker.o
 release/qrc_res.o
 release/moc_mainwindow.o
 release/moc_serialportworker.o
 release/moc_qcustomplot.o
 release/moc_waveformworker.o
+release/moc_attitudeworker.o

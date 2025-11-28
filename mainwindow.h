@@ -13,6 +13,18 @@
 #include <QWheelEvent>
 #include <QLabel>
 #include <QStringList>
+#include <Qt3DCore/QEntity>
+#include <Qt3DExtras/Qt3DWindow>
+#include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DExtras/QCuboidMesh>
+#include <Qt3DCore/QTransform>
+#include <Qt3DExtras/QFirstPersonCameraController>
+#include <Qt3DExtras/QOrbitCameraController>
+#include <Qt3DExtras/QConeMesh>
+#include <Qt3DExtras/QCylinderMesh>
+#include <Qt3DExtras/QSphereMesh>
+#include <Qt3DExtras/QTorusMesh>
+#include "attitudeworker.h"
 #include "qcustomplot/qcustomplot.h"
 #include "waveformworker.h"
 #include "serialportworker.h"
@@ -64,6 +76,15 @@ private:
     int m_waveMaxPoints = 5000;
     QThread* m_waveThread = nullptr;
     WaveformWorker* m_waveWorker = nullptr;
+    QWidget* m_tab3d = nullptr;
+    Qt3DExtras::Qt3DWindow* m_3dWindow = nullptr;
+    QWidget* m_3dContainer = nullptr;
+    Qt3DCore::QEntity* m_3dRoot = nullptr;
+    Qt3DCore::QTransform* m_modelTransform = nullptr;
+    Qt3DCore::QEntity* m_modelEntity = nullptr;
+    QThread* m_attThread = nullptr;
+    AttitudeWorker* m_attWorker = nullptr;
+    QLabel* m_attLabel = nullptr;
     bool m_waveAutoFollow = true;
     bool m_waveRangeUpdating = false;
     double m_waveViewWidth = 1000.0;
@@ -90,5 +111,8 @@ private:
     QString decodeTextSmart(const QByteArray& data) const;
     void setupWaveformTab();
     void updateWaveform(const QVector<QPointF>& points);
+    void setup3DTab();
+    void updateAttitude(double rollDeg, double pitchDeg, double yawDeg);
+    bool tryParseAttitude(const QByteArray& packet, double &roll, double &pitch, double &yaw) const;
 };
 #endif // MAINWINDOW_H

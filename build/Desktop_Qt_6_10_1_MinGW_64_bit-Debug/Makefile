@@ -84,6 +84,34 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_libjpeg.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_libpng.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_openxr_loader.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3danimation.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3danimation_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dcore.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dcore_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dextras.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dextras_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dinput.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dinput_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dlogic.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dlogic_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquick.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquick_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickanimation.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickanimation_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickextras.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickextras_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickinput.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickinput_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquicklogic.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquicklogic_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickrender.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickrender_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene2d.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene2d_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene3d.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene3d_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3drender.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3drender_private.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_charts.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_charts_private.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_chartsqml.pri \
@@ -271,6 +299,12 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_uiplugin.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_uitools.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_uitools_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_websockets.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_websockets_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webview.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webview_private.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webviewquick.pri \
+		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webviewquick_private.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_widgets.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_widgets_private.pri \
 		D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_xml.pri \
@@ -308,8 +342,16 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		../../HiCOM.pro \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6PrintSupport.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Widgets.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt63DExtras.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt63DRender.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt63DInput.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt63DLogic.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt63DCore.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt6OpenGL.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt6Concurrent.prl \
+		D:/Qt/6.10.1/mingw_64/lib/Qt6Network.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Core.prl \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/build_pass.prf \
 		../../res.qrc
@@ -328,6 +370,34 @@ D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_freetype.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_libjpeg.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_libpng.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_ext_openxr_loader.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3danimation.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3danimation_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dcore.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dcore_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dextras.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dextras_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dinput.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dinput_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dlogic.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dlogic_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquick.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquick_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickanimation.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickanimation_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickextras.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickextras_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickinput.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickinput_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquicklogic.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquicklogic_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickrender.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickrender_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene2d.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene2d_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene3d.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3dquickscene3d_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3drender.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_3drender_private.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_charts.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_charts_private.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_chartsqml.pri:
@@ -515,6 +585,12 @@ D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_tools_private.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_uiplugin.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_uitools.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_uitools_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_websockets.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_websockets_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webview.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webview_private.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webviewquick.pri:
+D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_webviewquick_private.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_widgets.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_widgets_private.pri:
 D:/Qt/6.10.1/mingw_64/mkspecs/modules/qt_lib_xml.pri:
@@ -552,8 +628,16 @@ D:/Qt/6.10.1/mingw_64/mkspecs/features/lex.prf:
 ../../HiCOM.pro:
 D:/Qt/6.10.1/mingw_64/lib/Qt6PrintSupport.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Widgets.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt63DExtras.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt63DRender.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt63DInput.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt63DLogic.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt63DCore.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt6OpenGL.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt6Concurrent.prl:
+D:/Qt/6.10.1/mingw_64/lib/Qt6Network.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Core.prl:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/build_pass.prf:
 ../../res.qrc:
