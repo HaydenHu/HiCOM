@@ -4,21 +4,24 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFontMetrics>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMutexLocker>
+#include <QPalette>
 #include <QRegularExpression>
+#include <QMouseEvent>
+#include <QScrollBar>
 #include <QSerialPortInfo>
 #include <QSpinBox>
 #include <QStatusBar>
+#include <QTextEdit>
 #include <QTextStream>
 #include <QTimer>
-#include <QTextEdit>
-#include <QScrollBar>
-#include <QDir>
+#include <QVBoxLayout>
 #include <algorithm>
 
 #ifndef ENABLE_DEBUG_LOG
@@ -125,6 +128,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serialWorker, &SerialPortWorker::infoMessage,
             this, [this](const QString& msg) { appendDebug(msg); }, Qt::QueuedConnection);
 
+    // waveform worker/thread
+    m_waveThread = new QThread(this);
+    m_waveWorker = new WaveformWorker;
+    m_waveWorker->moveToThread(m_waveThread);
+    connect(m_waveWorker, &WaveformWorker::dataReady, this, &MainWindow::updateWaveform, Qt::QueuedConnection);
+    m_waveThread->start();
+
+    // setup UI extras
+    setupWaveformTab();
+
     QTimer::singleShot(0, this, [this]() {
         QMetaObject::invokeMethod(m_serialWorker, "initializeSerialPort", Qt::QueuedConnection);
     });
@@ -134,7 +147,7 @@ MainWindow::MainWindow(QWidget *parent)
         updateSerialTooltip();
     });
 
-    ui->btnSerialCheck->setText(QStringLiteral("保存记录"));
+    ui->btnSerialCheck->setText(QString::fromUtf8(u8"保存记录"));
     connect(ui->btnSerialCheck, &QPushButton::clicked, this, [this]() { saveLogs(); });
 }
 
@@ -146,6 +159,10 @@ MainWindow::~MainWindow()
     if (m_serialThread) {
         m_serialThread->quit();
         m_serialThread->wait();
+    }
+    if (m_waveThread) {
+        m_waveThread->quit();
+        m_waveThread->wait();
     }
     delete ui;
 }
@@ -169,7 +186,9 @@ void MainWindow::on_sendButton_clicked()
     const QString text = ui->sendEdit->toPlainText();
     QByteArray payload = buildSendPayload(text);
     if (payload.isEmpty() && !text.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("发送失败"), QStringLiteral("HEX格式无效，未发送。"));
+        QMessageBox::warning(this,
+                             QString::fromUtf8(u8"发送失败"),
+                             QString::fromUtf8(u8"HEX格式无效，未发送。"));
         return;
     }
     writeData(payload);
@@ -238,6 +257,11 @@ void MainWindow::processWriteQueue()
 
 void MainWindow::onPacketReceived(const QByteArray &packet)
 {
+    // forward to waveform worker
+    if (m_waveWorker) {
+        QMetaObject::invokeMethod(m_waveWorker, "appendData", Qt::QueuedConnection, Q_ARG(QByteArray, packet));
+    }
+
     m_rxBytes += packet.size();
     updateStatusLabels();
 
@@ -272,13 +296,13 @@ void MainWindow::onFatalError(const QString &error)
     ui->recvEdit->append(QStringLiteral("<span style=\"color:red;\">[FATAL] %1</span>")
                              .arg(error.toHtmlEscaped()));
     m_isPortOpen = false;
-    ui->openBt->setText(QStringLiteral("打开串口"));
+    ui->openBt->setText(QString::fromUtf8(u8"打开串口"));
 }
 
 void MainWindow::onPortOpened()
 {
     m_isPortOpen = true;
-    ui->openBt->setText(QStringLiteral("关闭串口"));
+    ui->openBt->setText(QString::fromUtf8(u8"关闭串口"));
     ui->serialCb->setEnabled(false);
     ui->baundrateCb->setEnabled(false);
     ui->databitCb->setEnabled(false);
@@ -293,7 +317,7 @@ void MainWindow::onPortOpened()
 void MainWindow::onPortClosed()
 {
     m_isPortOpen = false;
-    ui->openBt->setText(QStringLiteral("打开串口"));
+    ui->openBt->setText(QString::fromUtf8(u8"打开串口"));
     ui->serialCb->setEnabled(true);
     ui->baundrateCb->setEnabled(true);
     ui->databitCb->setEnabled(true);
@@ -414,7 +438,7 @@ void MainWindow::updateStatusLabels()
             m_statusConn->setText(text);
             m_statusConn->setStyleSheet(QStringLiteral("color: green;"));
         } else {
-            m_statusConn->setText(QStringLiteral("未连接"));
+            m_statusConn->setText(QString::fromUtf8(u8"未连接"));
             m_statusConn->setStyleSheet(QStringLiteral("color: red;"));
         }
     }
@@ -441,14 +465,14 @@ void MainWindow::checkPortHotplug()
 void MainWindow::saveLogs()
 {
     const QString path = QFileDialog::getSaveFileName(
-        this, QStringLiteral("保存记录"),
+        this, QString::fromUtf8(u8"保存记录"),
         QDir::homePath() + QLatin1String("/hicom_log_") + QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".txt",
         QStringLiteral("Text Files (*.txt);;All Files (*.*)"));
     if (path.isEmpty()) return;
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::warning(this, QStringLiteral("保存失败"), QStringLiteral("无法打开文件写入。"));
+        QMessageBox::warning(this, QString::fromUtf8(u8"保存失败"), QString::fromUtf8(u8"无法打开文件写入。"));
         return;
     }
 
@@ -459,7 +483,7 @@ void MainWindow::saveLogs()
     out << ui->sendEdit->toPlainText() << "\n";
     file.close();
 
-    QMessageBox::information(this, QStringLiteral("保存完成"), QStringLiteral("已保存到：\n") + path);
+    QMessageBox::information(this, QString::fromUtf8(u8"保存完成"), QString::fromUtf8(u8"已保存到：\n") + path);
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -468,6 +492,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                          watched == ui->recvEdit->verticalScrollBar() || watched == ui->recvEdit->horizontalScrollBar());
     const bool isSend = (watched == ui->sendEdit || watched == ui->sendEdit->viewport() ||
                          watched == ui->sendEdit->verticalScrollBar() || watched == ui->sendEdit->horizontalScrollBar());
+    const bool isWave = (watched == m_wavePlot);
 
     if ((isRecv || isSend) && event->type() == QEvent::Wheel) {
         QWheelEvent *wheel = static_cast<QWheelEvent*>(event);
@@ -487,7 +512,13 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 f.setPointSize(m_sendFontPt);
                 ui->sendEdit->setFont(f);
             }
-            return true; // consume to避免同时滚动内容/滚动条
+            return true; // consume to avoid scroll
+        }
+    }
+    if (isWave && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *me = static_cast<QMouseEvent*>(event);
+        if (me->button() == Qt::LeftButton && !(me->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier))) {
+            m_waveAutoFollow = false;
         }
     }
     return QMainWindow::eventFilter(watched, event);
@@ -495,10 +526,77 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 QString MainWindow::decodeTextSmart(const QByteArray &data) const
 {
-    // Try UTF-8 first; if lossless, use it, otherwise fallback to local 8-bit.
     QString utf8 = QString::fromUtf8(data);
     if (utf8.toUtf8() == data) {
         return utf8;
     }
     return QString::fromLocal8Bit(data);
+}
+
+void MainWindow::setupWaveformTab()
+{
+    QWidget *waveTab = ui->tabWidget->findChild<QWidget*>("tab_waveform");
+    if (!waveTab) {
+        waveTab = new QWidget;
+        ui->tabWidget->insertTab(1, waveTab, QString::fromUtf8(u8"波形"));
+    }
+
+    QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(waveTab->layout());
+    if (!layout) {
+        layout = new QVBoxLayout(waveTab);
+        layout->setContentsMargins(0, 0, 0, 0);
+        waveTab->setLayout(layout);
+    } else {
+        while (QLayoutItem *item = layout->takeAt(0)) {
+            if (QWidget *w = item->widget()) {
+                w->deleteLater();
+            }
+            delete item;
+        }
+    }
+
+    m_wavePlot = new QCustomPlot(waveTab);
+    layout->addWidget(m_wavePlot);
+
+    m_waveGraph = m_wavePlot->addGraph();
+    m_waveGraph->setPen(QPen(Qt::green));
+    m_wavePlot->xAxis->setLabel("Sample");
+    m_wavePlot->yAxis->setLabel("Value");
+    m_wavePlot->yAxis->setRange(0, 260);
+    m_wavePlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+
+    // Match background to current theme
+    const QColor bg = waveTab->palette().color(QPalette::Base);
+    m_wavePlot->setBackground(bg);
+    if (m_wavePlot->axisRect()) {
+        m_wavePlot->axisRect()->setBackground(bg);
+    }
+
+    connect(m_wavePlot, &QCustomPlot::mouseDoubleClick, this, [this]() {
+        m_waveAutoFollow = true;
+    });
+
+    m_wavePlot->installEventFilter(this);
+}
+
+void MainWindow::updateWaveform(const QVector<QPointF> &points)
+{
+    if (!m_waveGraph) return;
+    for (const QPointF &p : points) {
+        m_waveData.append(QCPGraphData{p.x(), p.y()});
+    }
+    if (m_waveData.size() > m_waveMaxPoints) {
+        m_waveData.erase(m_waveData.begin(), m_waveData.begin() + (m_waveData.size() - m_waveMaxPoints));
+    }
+    m_waveGraph->data()->set(m_waveData, true);
+    if (!m_waveData.isEmpty()) {
+        if (m_waveAutoFollow) {
+            const double xmax = m_waveData.last().key;
+            const double xmin = std::max(0.0, xmax - m_waveViewWidth);
+            m_waveRangeUpdating = true;
+            m_wavePlot->xAxis->setRange(xmin, xmax);
+            m_waveRangeUpdating = false;
+        }
+    }
+    m_wavePlot->replot(QCustomPlot::rpQueuedReplot);
 }

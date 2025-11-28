@@ -13,6 +13,8 @@
 #include <QWheelEvent>
 #include <QLabel>
 #include <QStringList>
+#include "qcustomplot/qcustomplot.h"
+#include "waveformworker.h"
 #include "serialportworker.h"
 #include "serialsettings.h"
 
@@ -56,6 +58,15 @@ private:
     QLabel* m_statusConn = nullptr;
     QLabel* m_statusRx = nullptr;
     QLabel* m_statusTx = nullptr;
+    QCustomPlot* m_wavePlot = nullptr;
+    QCPGraph* m_waveGraph = nullptr;
+    QVector<QCPGraphData> m_waveData;
+    int m_waveMaxPoints = 5000;
+    QThread* m_waveThread = nullptr;
+    WaveformWorker* m_waveWorker = nullptr;
+    bool m_waveAutoFollow = true;
+    bool m_waveRangeUpdating = false;
+    double m_waveViewWidth = 1000.0;
     qint64 m_rxBytes = 0;
     qint64 m_txBytes = 0;
     QStringList m_knownPorts;
@@ -77,5 +88,7 @@ private:
     void checkPortHotplug();
     void saveLogs();
     QString decodeTextSmart(const QByteArray& data) const;
+    void setupWaveformTab();
+    void updateWaveform(const QVector<QPointF>& points);
 };
 #endif // MAINWINDOW_H

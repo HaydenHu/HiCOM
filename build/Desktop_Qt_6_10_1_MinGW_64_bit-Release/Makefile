@@ -10,9 +10,9 @@ MAKEFILE      = Makefile
 
 EQ            = =
 
-first: release
-install: release-install
-uninstall: release-uninstall
+first: debug
+install: debug-install
+uninstall: debug-uninstall
 QMAKE         = D:\Qt\6.10.1\mingw_64\bin\qmake.exe
 DEL_FILE      = del
 CHK_DIR_EXISTS= if not exist
@@ -37,24 +37,10 @@ RES_FILE      = HiCOM_resource_res.o
 SED           = $(QMAKE) -install sed
 MOVE          = move
 SUBTARGETS    =  \
-		release \
-		debug
+		debug \
+		release
 
 
-release: FORCE
-	$(MAKE) -f $(MAKEFILE).Release
-release-make_first: FORCE
-	$(MAKE) -f $(MAKEFILE).Release 
-release-all: FORCE
-	$(MAKE) -f $(MAKEFILE).Release all
-release-clean: FORCE
-	$(MAKE) -f $(MAKEFILE).Release clean
-release-distclean: FORCE
-	$(MAKE) -f $(MAKEFILE).Release distclean
-release-install: FORCE
-	$(MAKE) -f $(MAKEFILE).Release install
-release-uninstall: FORCE
-	$(MAKE) -f $(MAKEFILE).Release uninstall
 debug: FORCE
 	$(MAKE) -f $(MAKEFILE).Debug
 debug-make_first: FORCE
@@ -69,6 +55,20 @@ debug-install: FORCE
 	$(MAKE) -f $(MAKEFILE).Debug install
 debug-uninstall: FORCE
 	$(MAKE) -f $(MAKEFILE).Debug uninstall
+release: FORCE
+	$(MAKE) -f $(MAKEFILE).Release
+release-make_first: FORCE
+	$(MAKE) -f $(MAKEFILE).Release 
+release-all: FORCE
+	$(MAKE) -f $(MAKEFILE).Release all
+release-clean: FORCE
+	$(MAKE) -f $(MAKEFILE).Release clean
+release-distclean: FORCE
+	$(MAKE) -f $(MAKEFILE).Release distclean
+release-install: FORCE
+	$(MAKE) -f $(MAKEFILE).Release install
+release-uninstall: FORCE
+	$(MAKE) -f $(MAKEFILE).Release uninstall
 
 Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/Qt/6.10.1/mingw_64/mkspecs/features/spec_pre.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/device_config.prf \
@@ -288,6 +288,7 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/resolve_config.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/exclusive_builds_post.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/default_post.prf \
+		D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/console.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/qtquickcompiler.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/precompile_header.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/warn_on.prf \
@@ -300,7 +301,6 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/uic.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/qmake_use.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/file_copies.prf \
-		D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/windows.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/testcase_targets.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/exceptions.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/yacc.prf \
@@ -310,7 +310,6 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Core.prl \
-		D:/Qt/6.10.1/mingw_64/lib/Qt6EntryPoint.prl \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/build_pass.prf \
 		../../res.qrc
 	$(QMAKE) -o Makefile ..\..\HiCOM.pro -spec win32-g++ "CONFIG+=qtquickcompiler"
@@ -532,6 +531,7 @@ D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/default_pre.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/resolve_config.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/exclusive_builds_post.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/default_post.prf:
+D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/console.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/qtquickcompiler.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/precompile_header.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/warn_on.prf:
@@ -544,7 +544,6 @@ D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/opengl.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/uic.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/qmake_use.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/file_copies.prf:
-D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/windows.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/testcase_targets.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/exceptions.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/yacc.prf:
@@ -554,7 +553,6 @@ D:/Qt/6.10.1/mingw_64/lib/Qt6Widgets.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Core.prl:
-D:/Qt/6.10.1/mingw_64/lib/Qt6EntryPoint.prl:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/build_pass.prf:
 ../../res.qrc:
 qmake: FORCE
@@ -562,24 +560,24 @@ qmake: FORCE
 
 qmake_all: FORCE
 
-make_first: release-make_first debug-make_first  FORCE
-all: release-all debug-all  FORCE
-clean: release-clean debug-clean  FORCE
-distclean: release-distclean debug-distclean  FORCE
+make_first: debug-make_first release-make_first  FORCE
+all: debug-all release-all  FORCE
+clean: debug-clean release-clean  FORCE
+distclean: debug-distclean release-distclean  FORCE
 	-$(DEL_FILE) Makefile
 	-$(DEL_FILE) .qmake.stash
 
-release-mocclean:
-	$(MAKE) -f $(MAKEFILE).Release mocclean
 debug-mocclean:
 	$(MAKE) -f $(MAKEFILE).Debug mocclean
-mocclean: release-mocclean debug-mocclean
+release-mocclean:
+	$(MAKE) -f $(MAKEFILE).Release mocclean
+mocclean: debug-mocclean release-mocclean
 
-release-mocables:
-	$(MAKE) -f $(MAKEFILE).Release mocables
 debug-mocables:
 	$(MAKE) -f $(MAKEFILE).Debug mocables
-mocables: release-mocables debug-mocables
+release-mocables:
+	$(MAKE) -f $(MAKEFILE).Release mocables
+mocables: debug-mocables release-mocables
 
 check: first
 
@@ -588,5 +586,5 @@ FORCE:
 
 .SUFFIXES:
 
-$(MAKEFILE).Release: Makefile
 $(MAKEFILE).Debug: Makefile
+$(MAKEFILE).Release: Makefile

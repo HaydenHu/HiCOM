@@ -1,8 +1,9 @@
-QT       += core gui serialport
+QT       += core gui serialport printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17 debug
+QMAKE_CXXFLAGS += -Wa,-mbig-obj -Wno-deprecated-declarations
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -12,13 +13,17 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     ringbuffer.cpp \
-    serialportworker.cpp
+    serialportworker.cpp \
+    qcustomplot/qcustomplot.cpp \
+    waveformworker.cpp
 
 HEADERS += \
     mainwindow.h \
     serialsettings.h \
     ringbuffer.h \
-    serialportworker.h
+    serialportworker.h \
+    qcustomplot/qcustomplot.h \
+    waveformworker.h
 
 FORMS += \
     mainwindow.ui

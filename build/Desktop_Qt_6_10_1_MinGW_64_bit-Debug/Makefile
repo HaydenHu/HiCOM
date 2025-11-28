@@ -306,6 +306,7 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/yacc.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/lex.prf \
 		../../HiCOM.pro \
+		D:/Qt/6.10.1/mingw_64/lib/Qt6PrintSupport.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Widgets.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl \
@@ -549,6 +550,7 @@ D:/Qt/6.10.1/mingw_64/mkspecs/features/exceptions.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/yacc.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/lex.prf:
 ../../HiCOM.pro:
+D:/Qt/6.10.1/mingw_64/lib/Qt6PrintSupport.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Widgets.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl:
