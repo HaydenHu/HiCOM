@@ -13,6 +13,10 @@
 #include <QWheelEvent>
 #include <QLabel>
 #include <QStringList>
+#include <QPushButton>
+#include <QPlainTextEdit>
+#include <QLineEdit>
+#include <QToolButton>
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QPhongMaterial>
@@ -54,12 +58,10 @@ private slots:
     
 private:
     Ui::MainWindow *ui;
-    
-    // 添加缺失的成员变量
+
     QThread* m_serialThread;
     SerialPortWorker* m_serialWorker;
-    
-    // 写队列相关成员变量
+
     QMutex m_queueMutex;
     QList<QByteArray> m_writeQueue;
     bool m_isWriting;
@@ -88,6 +90,7 @@ private:
     bool m_waveAutoFollow = true;
     bool m_waveRangeUpdating = false;
     double m_waveViewWidth = 1000.0;
+    double m_waveX = 0.0;
     qint64 m_rxBytes = 0;
     qint64 m_txBytes = 0;
     QStringList m_knownPorts;
@@ -97,6 +100,11 @@ private:
     bool m_toggleTimestampColor = false;
     int m_recvFontPt = 0;
     int m_sendFontPt = 0;
+    QStringList m_waveRegexList;
+    QString m_attRegex;
+    bool m_useWaveRegex = true;
+    bool m_useAttRegex = true;
+    QToolButton* m_formatBtn = nullptr;
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
@@ -111,8 +119,11 @@ private:
     QString decodeTextSmart(const QByteArray& data) const;
     void setupWaveformTab();
     void updateWaveform(const QVector<QPointF>& points);
+    void updateWaveformValues(const QVector<double>& values);
     void setup3DTab();
     void updateAttitude(double rollDeg, double pitchDeg, double yawDeg);
     bool tryParseAttitude(const QByteArray& packet, double &roll, double &pitch, double &yaw) const;
+    bool tryParseWaveValues(const QString &text, QVector<double> &values) const;
+    void openFormatDialog();
 };
 #endif // MAINWINDOW_H

@@ -169,6 +169,23 @@ MainWindow::MainWindow(QWidget *parent)
     ui->btnSerialCheck->setText(QString::fromUtf8(u8"保存记录"));
     connect(ui->btnSerialCheck, &QPushButton::clicked, this, [this]() { saveLogs(); });
 
+    // 默认正则
+    m_waveRegexList = {QStringLiteral("(-?\\d+(?:\\.\\d+)?)")};
+    m_attRegex = QStringLiteral("([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)");
+
+    // 右上角标签栏放置“格式”齿轮按钮（打开弹窗）
+    m_formatBtn = new QToolButton(this);
+    m_formatBtn->setText(QString::fromUtf8(u8"⚙"));
+    m_formatBtn->setToolTip(QString::fromUtf8(u8"格式设置"));
+    m_formatBtn->setAutoRaise(true);
+    m_formatBtn->setFixedSize(24, 24);
+    if (ui->tabWidget) {
+        ui->tabWidget->setCornerWidget(m_formatBtn, Qt::TopRightCorner);
+    } else {
+        ui->statusbar->addPermanentWidget(m_formatBtn);
+    }
+    connect(m_formatBtn, &QToolButton::clicked, this, &MainWindow::openFormatDialog);
+
     setup3DTab();
 }
 
@@ -283,28 +300,31 @@ void MainWindow::processWriteQueue()
 
 void MainWindow::onPacketReceived(const QByteArray &packet)
 {
-    // forward to waveform worker
-    if (m_waveWorker) {
+    QVector<double> waveValues;
+    bool waveParsed = false;
+    QString raw = decodeTextSmart(packet).trimmed();
+    if (m_useWaveRegex && tryParseWaveValues(raw, waveValues) && !waveValues.isEmpty()) {
+        updateWaveformValues(waveValues);
+        waveParsed = true;
+    }
+    if (!waveParsed && m_waveWorker) {
         QMetaObject::invokeMethod(m_waveWorker, "appendData", Qt::QueuedConnection, Q_ARG(QByteArray, packet));
     }
+
     // 3D姿态：先在标签显示原始文本，方便排查；若能解析则再发给姿态线程
     if (m_attLabel) {
-        QString raw = decodeTextSmart(packet).trimmed();
-        if (raw.isEmpty()) {
-            // Keep previous display if nothing meaningful arrived
-        } else {
-            if (raw.size() > 80) raw = raw.left(77) + "...";
-            // If raw looks like comma separated, format as Roll/Pitch/Yaw
-            const QStringList parts = raw.split(QRegularExpression(QStringLiteral("[,\\s]+")),
-                                                Qt::SkipEmptyParts);
+        if (!raw.isEmpty()) {
+            QString display = raw;
+            if (display.size() > 80) display = display.left(77) + "...";
+            const QStringList parts = display.split(QRegularExpression(QStringLiteral("[,\\s]+")),
+                                                    Qt::SkipEmptyParts);
             if (parts.size() >= 3) {
-                m_attLabel->setText(QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
-                                        .arg(parts.at(0))
-                                        .arg(parts.at(1))
-                                        .arg(parts.at(2)));
-            } else {
-                m_attLabel->setText(raw);
+                display = QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
+                              .arg(parts.at(0))
+                              .arg(parts.at(1))
+                              .arg(parts.at(2));
             }
+            m_attLabel->setText(display);
         }
     }
     if (m_attWorker) {
@@ -586,6 +606,89 @@ QString MainWindow::decodeTextSmart(const QByteArray &data) const
     return QString::fromLocal8Bit(data);
 }
 
+bool MainWindow::tryParseWaveValues(const QString &text, QVector<double> &values) const
+{
+    values.clear();
+    if (!m_useWaveRegex || m_waveRegexList.isEmpty()) return false;
+
+    for (const QString &pattern : m_waveRegexList) {
+        if (pattern.trimmed().isEmpty()) continue;
+        QRegularExpression re(pattern);
+        QRegularExpressionMatchIterator it = re.globalMatch(text);
+        QVector<double> tmp;
+        while (it.hasNext()) {
+            QRegularExpressionMatch m = it.next();
+            QString numStr;
+            if (m.lastCapturedIndex() >= 1) {
+                numStr = m.captured(1);
+            } else {
+                numStr = m.captured(0);
+            }
+            bool ok = false;
+            double v = numStr.toDouble(&ok);
+            if (ok) tmp.append(v);
+        }
+        if (!tmp.isEmpty()) {
+            values = tmp;
+            return true;
+        }
+    }
+    return false;
+}
+
+void MainWindow::openFormatDialog()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8(u8"格式设置"));
+    QVBoxLayout* v = new QVBoxLayout(&dlg);
+
+    QCheckBox* waveEnable = new QCheckBox(QString::fromUtf8(u8"启用自定义波形正则（一行一个，使用第一个匹配到的组或整个匹配值）"), &dlg);
+    waveEnable->setChecked(m_useWaveRegex);
+    v->addWidget(waveEnable);
+
+    QPlainTextEdit* waveEdit = new QPlainTextEdit(&dlg);
+    waveEdit->setPlaceholderText(QString::fromUtf8(u8"例：(-?\\d+(?:\\.\\d+)?)"));
+    waveEdit->setPlainText(m_waveRegexList.join("\n"));
+    waveEdit->setFixedHeight(100);
+    v->addWidget(waveEdit);
+
+    QCheckBox* attEnable = new QCheckBox(QString::fromUtf8(u8"启用自定义姿态正则（需至少3个捕获组，依次为Roll/Pitch/Yaw）"), &dlg);
+    attEnable->setChecked(m_useAttRegex);
+    v->addWidget(attEnable);
+
+    QLineEdit* attEdit = new QLineEdit(&dlg);
+    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)"));
+    attEdit->setText(m_attRegex);
+    v->addWidget(attEdit);
+
+    QHBoxLayout* btns = new QHBoxLayout;
+    QPushButton* resetBtn = new QPushButton(QString::fromUtf8(u8"恢复默认"), &dlg);
+    QPushButton* okBtn = new QPushButton(QString::fromUtf8(u8"确定"), &dlg);
+    QPushButton* cancelBtn = new QPushButton(QString::fromUtf8(u8"取消"), &dlg);
+    btns->addStretch();
+    btns->addWidget(resetBtn);
+    btns->addWidget(okBtn);
+    btns->addWidget(cancelBtn);
+    v->addLayout(btns);
+
+    connect(resetBtn, &QPushButton::clicked, [&]() {
+        waveEnable->setChecked(true);
+        attEnable->setChecked(true);
+        waveEdit->setPlainText(QStringLiteral("(-?\\d+(?:\\.\\d+)?)"));
+        attEdit->setText(QStringLiteral("([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)"));
+    });
+    connect(okBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+    connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        m_useWaveRegex = waveEnable->isChecked();
+        m_useAttRegex = attEnable->isChecked();
+        m_waveRegexList = waveEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+        for (QString &s : m_waveRegexList) s = s.trimmed();
+        m_attRegex = attEdit->text().trimmed();
+    }
+}
+
 void MainWindow::setupWaveformTab()
 {
     QWidget *waveTab = ui->tabWidget->findChild<QWidget*>("tab_waveform");
@@ -650,6 +753,27 @@ void MainWindow::updateWaveform(const QVector<QPointF> &points)
             m_wavePlot->xAxis->setRange(xmin, xmax);
             m_waveRangeUpdating = false;
         }
+    }
+    m_wavePlot->replot(QCustomPlot::rpQueuedReplot);
+}
+
+void MainWindow::updateWaveformValues(const QVector<double> &values)
+{
+    if (!m_waveGraph) return;
+    for (double v : values) {
+        m_waveData.append(QCPGraphData{m_waveX, v});
+        m_waveX += 1.0;
+    }
+    if (m_waveData.size() > m_waveMaxPoints) {
+        m_waveData.erase(m_waveData.begin(), m_waveData.begin() + (m_waveData.size() - m_waveMaxPoints));
+    }
+    m_waveGraph->data()->set(m_waveData, true);
+    if (!m_waveData.isEmpty() && m_waveAutoFollow) {
+        const double xmax = m_waveData.last().key;
+        const double xmin = std::max(0.0, xmax - m_waveViewWidth);
+        m_waveRangeUpdating = true;
+        m_wavePlot->xAxis->setRange(xmin, xmax);
+        m_waveRangeUpdating = false;
     }
     m_wavePlot->replot(QCustomPlot::rpQueuedReplot);
 }
@@ -764,7 +888,21 @@ void MainWindow::updateAttitude(double rollDeg, double pitchDeg, double yawDeg)
 
 bool MainWindow::tryParseAttitude(const QByteArray &packet, double &roll, double &pitch, double &yaw) const
 {
-    QString str = QString::fromUtf8(packet).trimmed();
+    QString str = decodeTextSmart(packet).trimmed();
+    if (m_useAttRegex && !m_attRegex.isEmpty()) {
+        QRegularExpression re(m_attRegex);
+        QRegularExpressionMatch m = re.match(str);
+        if (m.hasMatch() && m.lastCapturedIndex() >= 3) {
+            bool ok1=false, ok2=false, ok3=false;
+            double r = m.captured(1).toDouble(&ok1);
+            double p = m.captured(2).toDouble(&ok2);
+            double y = m.captured(3).toDouble(&ok3);
+            if (ok1 && ok2 && ok3) {
+                roll = r; pitch = p; yaw = y;
+                return true;
+            }
+        }
+    }
     const QStringList parts = str.split(',', Qt::SkipEmptyParts);
     if (parts.size() != 3) return false;
     bool ok1=false, ok2=false, ok3=false;
