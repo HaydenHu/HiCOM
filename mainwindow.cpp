@@ -16,6 +16,8 @@
 #include <QStatusBar>
 #include <QTextStream>
 #include <QTimer>
+#include <QTextEdit>
+#include <QDir>
 #include <algorithm>
 
 #ifndef ENABLE_DEBUG_LOG
@@ -70,6 +72,12 @@ MainWindow::MainWindow(QWidget *parent)
     ui->statusbar->addWidget(m_statusConn);
     ui->statusbar->addPermanentWidget(m_statusRx);
     ui->statusbar->addPermanentWidget(m_statusTx);
+    m_recvFontPt = ui->recvEdit->font().pointSize();
+    m_sendFontPt = ui->sendEdit->font().pointSize();
+    if (m_recvFontPt <= 0) m_recvFontPt = 10;
+    if (m_sendFontPt <= 0) m_sendFontPt = 10;
+    ui->recvEdit->installEventFilter(this);
+    ui->sendEdit->installEventFilter(this);
 
     connect(ui->openBt, &QPushButton::clicked, this, &MainWindow::on_openButton_clicked);
     connect(ui->sendBt, &QPushButton::clicked, this, &MainWindow::on_sendButton_clicked);
@@ -184,6 +192,11 @@ SerialSettings MainWindow::getCurrentSerialSettings() const
 
 void MainWindow::writeData(const QByteArray &data)
 {
+    if (!m_isPortOpen) {
+        appendDebug(QStringLiteral("Send skipped: port not open"));
+        return;
+    }
+
     QMutexLocker locker(&m_queueMutex);
     m_writeQueue.append(data);
     m_txBytes += data.size();
@@ -280,6 +293,11 @@ void MainWindow::onPortClosed()
     ui->checkbitCb->setEnabled(true);
     ui->stopbitCb->setEnabled(true);
     m_hasCurrentSettings = false;
+    {
+        QMutexLocker locker(&m_queueMutex);
+        m_writeQueue.clear();
+        m_isWriting = false;
+    }
     updateStatusLabels();
     appendDebug(QStringLiteral("Serial port closed."));
 }
@@ -435,4 +453,30 @@ void MainWindow::saveLogs()
     file.close();
 
     QMessageBox::information(this, QStringLiteral("保存完成"), QStringLiteral("已保存到：\n") + path);
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if ((watched == ui->recvEdit || watched == ui->sendEdit) && event->type() == QEvent::Wheel) {
+        QWheelEvent *wheel = static_cast<QWheelEvent*>(event);
+        if (wheel->modifiers() & Qt::ControlModifier) {
+            const int delta = wheel->angleDelta().y();
+            const int step = (delta > 0) ? 1 : -1;
+            const int minSize = 8;
+            const int maxSize = 40;
+            if (watched == ui->recvEdit) {
+                m_recvFontPt = std::clamp(m_recvFontPt + step, minSize, maxSize);
+                QFont f = ui->recvEdit->font();
+                f.setPointSize(m_recvFontPt);
+                ui->recvEdit->setFont(f);
+            } else {
+                m_sendFontPt = std::clamp(m_sendFontPt + step, minSize, maxSize);
+                QFont f = ui->sendEdit->font();
+                f.setPointSize(m_sendFontPt);
+                ui->sendEdit->setFont(f);
+            }
+            return true;
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
 }

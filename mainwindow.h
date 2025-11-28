@@ -9,6 +9,8 @@
 #include <QTimer>
 #include <QFile>
 #include <QFileDialog>
+#include <QEvent>
+#include <QWheelEvent>
 #include <QLabel>
 #include <QStringList>
 #include "serialportworker.h"
@@ -25,6 +27,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void on_openButton_clicked();
@@ -60,6 +63,8 @@ private:
     bool m_hasCurrentSettings = false;
     bool m_enableDebug = true;
     bool m_toggleTimestampColor = false;
+    int m_recvFontPt = 0;
+    int m_sendFontPt = 0;
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
