@@ -39,36 +39,38 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "MainWindow",
-        "manual_serialPortReadyRead",
+        "on_openButton_clicked",
         "",
-        "on_openBt_clicked",
-        "on_sendBt_clicked",
-        "on_clearBt_clicked",
-        "on_btnClearSend_clicked",
-        "on_chkTimSend_stateChanged",
-        "arg1",
-        "on_btnSerialCheck_clicked",
-        "initRecvTextEdit"
+        "on_sendButton_clicked",
+        "onPacketReceived",
+        "packet",
+        "onErrorOccurred",
+        "error",
+        "onFatalError",
+        "onPortOpened",
+        "onPortClosed"
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Slot 'manual_serialPortReadyRead'
+        // Slot 'on_openButton_clicked'
         QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_openBt_clicked'
+        // Slot 'on_sendButton_clicked'
         QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_sendBt_clicked'
-        QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_clearBt_clicked'
-        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_btnClearSend_clicked'
-        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_chkTimSend_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(7, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 8 },
+        // Slot 'onPacketReceived'
+        QtMocHelpers::SlotData<void(const QByteArray &)>(4, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QByteArray, 5 },
         }}),
-        // Slot 'on_btnSerialCheck_clicked'
+        // Slot 'onErrorOccurred'
+        QtMocHelpers::SlotData<void(const QString &)>(6, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 7 },
+        }}),
+        // Slot 'onFatalError'
+        QtMocHelpers::SlotData<void(const QString &)>(8, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 7 },
+        }}),
+        // Slot 'onPortOpened'
         QtMocHelpers::SlotData<void()>(9, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'initRecvTextEdit'
+        // Slot 'onPortClosed'
         QtMocHelpers::SlotData<void()>(10, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
@@ -93,14 +95,13 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
     auto *_t = static_cast<MainWindow *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->manual_serialPortReadyRead(); break;
-        case 1: _t->on_openBt_clicked(); break;
-        case 2: _t->on_sendBt_clicked(); break;
-        case 3: _t->on_clearBt_clicked(); break;
-        case 4: _t->on_btnClearSend_clicked(); break;
-        case 5: _t->on_chkTimSend_stateChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 6: _t->on_btnSerialCheck_clicked(); break;
-        case 7: _t->initRecvTextEdit(); break;
+        case 0: _t->on_openButton_clicked(); break;
+        case 1: _t->on_sendButton_clicked(); break;
+        case 2: _t->onPacketReceived((*reinterpret_cast<std::add_pointer_t<QByteArray>>(_a[1]))); break;
+        case 3: _t->onErrorOccurred((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 4: _t->onFatalError((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 5: _t->onPortOpened(); break;
+        case 6: _t->onPortClosed(); break;
         default: ;
         }
     }
@@ -125,14 +126,14 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 8)
+        if (_id < 7)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 8;
+        _id -= 7;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 8)
+        if (_id < 7)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 8;
+        _id -= 7;
     }
     return _id;
 }

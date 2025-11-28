@@ -395,7 +395,7 @@ public:
 
         retranslateUi(MainWindow);
 
-        tabWidget->setCurrentIndex(1);
+        tabWidget->setCurrentIndex(0);
         baundrateCb->setCurrentIndex(6);
         databitCb->setCurrentIndex(3);
         checkbitCb->setCurrentIndex(0);

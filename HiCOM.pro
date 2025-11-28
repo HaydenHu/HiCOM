@@ -2,7 +2,7 @@ QT       += core gui serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++17
+CONFIG += c++17 debug
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -10,10 +10,15 @@ CONFIG += c++17
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    ringbuffer.cpp \
+    serialportworker.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    serialsettings.h \
+    ringbuffer.h \
+    serialportworker.h
 
 FORMS += \
     mainwindow.ui
@@ -27,3 +32,6 @@ RESOURCES += \
     res.qrc
 
 RC_ICONS = .\image\logo64.ico          # logo.ico是你图片的文件名
+
+# 启用控制台输出以便查看调试信息
+CONFIG += console

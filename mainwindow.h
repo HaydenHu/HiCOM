@@ -2,12 +2,13 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QThread>
 #include <QSerialPort>
-#include <QString>
-#include <QSerialPortInfo>
-#include <QMessageBox>
+#include <QMutex>
+#include <QList>
 #include <QTimer>
-#include <QPainter>
+#include "serialportworker.h"
+#include "serialsettings.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -21,41 +22,34 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    QSerialPort *serialPort;//定义串口指针
-
 private slots:
-
-    /*手动连接槽函数*/
-    void manual_serialPortReadyRead();
-
-    /*以下为mainwindow.ui文件中点击“转到槽”自动生成的函数*/
-    void on_openBt_clicked();
-
-    void on_sendBt_clicked();
-
-    void on_clearBt_clicked();
-
-    void on_btnClearSend_clicked();
-
-    void on_chkTimSend_stateChanged(int arg1);
-
-    void on_btnSerialCheck_clicked();
-
-    void initRecvTextEdit();
-
+    void on_openButton_clicked();
+    void on_sendButton_clicked();
+    void onPacketReceived(const QByteArray &packet);
+    void onErrorOccurred(const QString &error);
+    void onFatalError(const QString &error);
+    void onPortOpened();
+    void onPortClosed();
+    
 private:
     Ui::MainWindow *ui;
+    
+    // 添加缺失的成员变量
+    QThread* m_serialThread;
+    SerialPortWorker* m_serialWorker;
+    
+    // 写队列相关成员变量
+    QMutex m_queueMutex;
+    QList<QByteArray> m_writeQueue;
+    bool m_isWriting;
+    bool m_isPortOpen = false;
+    QTimer* m_sendTimer = nullptr;
+    bool m_autoSend = false;
 
-    // 发送、接收字节计数
-    long sendNum, recvNum;
-    QLabel *lblSendNum;
-    QLabel *lblRecvNum;
-    QLabel *lblPortState;
-    void setNumOnLabel(QLabel *lbl, QString strS, long num);
-
-    // 定时发送-定时器
-    QTimer *timSend;
-    //QTimer *timCheckPort;
+    SerialSettings getCurrentSerialSettings() const;
+    void writeData(const QByteArray &data);
+    void processWriteQueue();
+    QByteArray buildSendPayload(const QString& text) const;
+    void appendDebug(const QString& text);
 };
 #endif // MAINWINDOW_H
-

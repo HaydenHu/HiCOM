@@ -288,6 +288,7 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/resolve_config.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/exclusive_builds_post.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/default_post.prf \
+		D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/console.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/qml_debug.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/precompile_header.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/warn_on.prf \
@@ -300,7 +301,6 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/uic.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/qmake_use.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/file_copies.prf \
-		D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/windows.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/testcase_targets.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/exceptions.prf \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/yacc.prf \
@@ -310,7 +310,6 @@ Makefile: ../../HiCOM.pro D:/Qt/6.10.1/mingw_64/mkspecs/win32-g++/qmake.conf D:/
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl \
 		D:/Qt/6.10.1/mingw_64/lib/Qt6Core.prl \
-		D:/Qt/6.10.1/mingw_64/lib/Qt6EntryPoint.prl \
 		D:/Qt/6.10.1/mingw_64/mkspecs/features/build_pass.prf \
 		../../res.qrc
 	$(QMAKE) -o Makefile ..\..\HiCOM.pro -spec win32-g++ "CONFIG+=debug" "CONFIG+=qml_debug"
@@ -532,6 +531,7 @@ D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/default_pre.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/resolve_config.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/exclusive_builds_post.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/default_post.prf:
+D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/console.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/qml_debug.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/precompile_header.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/warn_on.prf:
@@ -544,7 +544,6 @@ D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/opengl.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/uic.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/qmake_use.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/file_copies.prf:
-D:/Qt/6.10.1/mingw_64/mkspecs/features/win32/windows.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/testcase_targets.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/exceptions.prf:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/yacc.prf:
@@ -554,7 +553,6 @@ D:/Qt/6.10.1/mingw_64/lib/Qt6Widgets.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Gui.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6SerialPort.prl:
 D:/Qt/6.10.1/mingw_64/lib/Qt6Core.prl:
-D:/Qt/6.10.1/mingw_64/lib/Qt6EntryPoint.prl:
 D:/Qt/6.10.1/mingw_64/mkspecs/features/build_pass.prf:
 ../../res.qrc:
 qmake: FORCE
