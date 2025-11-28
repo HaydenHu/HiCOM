@@ -17,6 +17,7 @@
 #include <QTextStream>
 #include <QTimer>
 #include <QTextEdit>
+#include <QScrollBar>
 #include <QDir>
 #include <algorithm>
 
@@ -78,6 +79,12 @@ MainWindow::MainWindow(QWidget *parent)
     if (m_sendFontPt <= 0) m_sendFontPt = 10;
     ui->recvEdit->installEventFilter(this);
     ui->sendEdit->installEventFilter(this);
+    ui->recvEdit->viewport()->installEventFilter(this);
+    ui->sendEdit->viewport()->installEventFilter(this);
+    if (ui->recvEdit->verticalScrollBar()) ui->recvEdit->verticalScrollBar()->installEventFilter(this);
+    if (ui->recvEdit->horizontalScrollBar()) ui->recvEdit->horizontalScrollBar()->installEventFilter(this);
+    if (ui->sendEdit->verticalScrollBar()) ui->sendEdit->verticalScrollBar()->installEventFilter(this);
+    if (ui->sendEdit->horizontalScrollBar()) ui->sendEdit->horizontalScrollBar()->installEventFilter(this);
 
     connect(ui->openBt, &QPushButton::clicked, this, &MainWindow::on_openButton_clicked);
     connect(ui->sendBt, &QPushButton::clicked, this, &MainWindow::on_sendButton_clicked);
@@ -244,7 +251,7 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     if (ui->chk_rev_hex->isChecked()) {
         line += formatAsHex(packet).toHtmlEscaped();
     } else {
-        line += QString::fromUtf8(packet).toHtmlEscaped();
+        line += decodeTextSmart(packet).toHtmlEscaped();
     }
     if (ui->chk_rev_line->isChecked()) {
         line += QLatin1Char('\n');
@@ -457,14 +464,19 @@ void MainWindow::saveLogs()
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
-    if ((watched == ui->recvEdit || watched == ui->sendEdit) && event->type() == QEvent::Wheel) {
+    const bool isRecv = (watched == ui->recvEdit || watched == ui->recvEdit->viewport() ||
+                         watched == ui->recvEdit->verticalScrollBar() || watched == ui->recvEdit->horizontalScrollBar());
+    const bool isSend = (watched == ui->sendEdit || watched == ui->sendEdit->viewport() ||
+                         watched == ui->sendEdit->verticalScrollBar() || watched == ui->sendEdit->horizontalScrollBar());
+
+    if ((isRecv || isSend) && event->type() == QEvent::Wheel) {
         QWheelEvent *wheel = static_cast<QWheelEvent*>(event);
         if (wheel->modifiers() & Qt::ControlModifier) {
             const int delta = wheel->angleDelta().y();
             const int step = (delta > 0) ? 1 : -1;
             const int minSize = 8;
             const int maxSize = 40;
-            if (watched == ui->recvEdit) {
+            if (isRecv) {
                 m_recvFontPt = std::clamp(m_recvFontPt + step, minSize, maxSize);
                 QFont f = ui->recvEdit->font();
                 f.setPointSize(m_recvFontPt);
@@ -475,8 +487,18 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 f.setPointSize(m_sendFontPt);
                 ui->sendEdit->setFont(f);
             }
-            return true;
+            return true; // consume to避免同时滚动内容/滚动条
         }
     }
     return QMainWindow::eventFilter(watched, event);
+}
+
+QString MainWindow::decodeTextSmart(const QByteArray &data) const
+{
+    // Try UTF-8 first; if lossless, use it, otherwise fallback to local 8-bit.
+    QString utf8 = QString::fromUtf8(data);
+    if (utf8.toUtf8() == data) {
+        return utf8;
+    }
+    return QString::fromLocal8Bit(data);
 }

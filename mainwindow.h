@@ -76,5 +76,6 @@ private:
     void updateStatusLabels();
     void checkPortHotplug();
     void saveLogs();
+    QString decodeTextSmart(const QByteArray& data) const;
 };
 #endif // MAINWINDOW_H
