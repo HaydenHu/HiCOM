@@ -721,6 +721,16 @@ void MainWindow::setupWaveformTab()
     m_wavePlot->yAxis->setRange(0, 260);
     m_wavePlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
 
+    // 减少X轴刻度密度，避免拥挤
+    {
+        QSharedPointer<QCPAxisTicker> ticker(new QCPAxisTicker);
+        ticker->setTickStepStrategy(QCPAxisTicker::tssMeetTickCount);
+        ticker->setTickCount(6);
+        m_wavePlot->xAxis->setTicker(ticker);
+        m_wavePlot->xAxis->setNumberFormat("f");
+        m_wavePlot->xAxis->setNumberPrecision(0);
+    }
+
     // Match background to current theme
     const QColor bg = waveTab->palette().color(QPalette::Base);
     m_wavePlot->setBackground(bg);

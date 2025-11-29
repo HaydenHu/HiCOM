@@ -75,7 +75,7 @@ private:
     QCustomPlot* m_wavePlot = nullptr;
     QCPGraph* m_waveGraph = nullptr;
     QVector<QCPGraphData> m_waveData;
-    int m_waveMaxPoints = 5000;
+    int m_waveMaxPoints = 3000;
     QThread* m_waveThread = nullptr;
     WaveformWorker* m_waveWorker = nullptr;
     QWidget* m_tab3d = nullptr;
@@ -89,7 +89,7 @@ private:
     QLabel* m_attLabel = nullptr;
     bool m_waveAutoFollow = true;
     bool m_waveRangeUpdating = false;
-    double m_waveViewWidth = 1000.0;
+    double m_waveViewWidth = 300.0; // 展示区只看最近300个采样，避免挤在一起
     double m_waveX = 0.0;
     qint64 m_rxBytes = 0;
     qint64 m_txBytes = 0;

@@ -2,7 +2,7 @@ QT       += core gui serialport printsupport 3dcore 3drender 3dinput 3dextras 3d
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++17 debug
+CONFIG += c++17
 QMAKE_CXXFLAGS += -Wa,-mbig-obj -Wno-deprecated-declarations
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -41,6 +41,7 @@ RESOURCES += \
 RC_ICONS = .\image\logo64.ico          # logo.ico是你图片的文件名
 
 # 启用控制台输出以便查看调试信息
-CONFIG += console
+# CONFIG += console
+
 
 DEFINES += ENABLE_DEBUG_LOG=0
