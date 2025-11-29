@@ -420,6 +420,7 @@ QByteArray MainWindow::buildSendPayload(const QString &text) const
         return data;
     }
 
+    // 文本模式按 UTF-8 编码发送，emoji/中文等多字节字符才能完整传输
     return content.toUtf8();
 }
 
@@ -599,6 +600,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 QString MainWindow::decodeTextSmart(const QByteArray &data) const
 {
+    // 优先按 UTF-8 解码，确保收到的 emoji/中文正确显示，失败再退回本地编码
     QString utf8 = QString::fromUtf8(data);
     if (utf8.toUtf8() == data) {
         return utf8;
