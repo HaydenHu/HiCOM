@@ -438,7 +438,7 @@ void MainWindow::refreshSerialPorts()
     const QString currentText = ui->serialCb->currentText();
 
     ui->serialCb->clear();
-    const int maxWidth = 160;
+    const int maxWidth = 165;
     const QFontMetrics fm(ui->serialCb->font());
 
     QStringList names;
