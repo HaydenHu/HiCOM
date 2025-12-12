@@ -180,6 +180,9 @@ MainWindow::MainWindow(QWidget *parent)
             if (m_inRecvAppend) return;
             const bool atBottom = (value >= vs->maximum());
             m_recvAutoFollow = atBottom;
+            if (atBottom) {
+                vs->setStyleSheet(QString());
+            }
         };
         connect(vs, &QScrollBar::valueChanged, this, syncFollow);
         connect(vs, &QScrollBar::sliderReleased, this, [this, vs, syncFollow]() { syncFollow(vs->value()); });
@@ -397,9 +400,24 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
         c.movePosition(QTextCursor::End);
         ui->recvEdit->setTextCursor(c);
         ui->recvEdit->ensureCursorVisible();
+        if (vs) vs->setStyleSheet(QStringLiteral(
+            "QScrollBar:vertical {background: #e6f5e6;}"
+            "QScrollBar::handle:vertical {background: #1f5c1f; min-height: 24px; border-radius: 4px;}"));
     } else if (vs && restorePos >= 0) {
         QSignalBlocker block(vs);
         vs->setValue(restorePos);
+        vs->setStyleSheet(QStringLiteral(
+            "QScrollBar:vertical {background: #e8ffe8;}"
+            "QScrollBar::handle:vertical {background: #3fa34a; min-height: 24px; border-radius: 4px;}"));
+    }
+    if (vs) {
+        const int token = ++m_recvColorToken;
+        QScrollBar* vsPtr = vs;
+        QTimer::singleShot(800, this, [this, vsPtr, token]() {
+            if (token == m_recvColorToken && ui && ui->recvEdit && ui->recvEdit->verticalScrollBar() == vsPtr) {
+                vsPtr->setStyleSheet(QString());
+            }
+        });
     }
 }
 

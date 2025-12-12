@@ -110,6 +110,7 @@ private:
     QToolButton* m_formatBtn = nullptr;
     bool m_recvAutoFollow = true;
     bool m_inRecvAppend = false;
+    int m_recvColorToken = 0;
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
