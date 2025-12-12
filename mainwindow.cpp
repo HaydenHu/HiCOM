@@ -25,6 +25,8 @@
 #include <QStringDecoder>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QToolTip>
+#include <limits>
 #include <QStackedLayout>
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
@@ -383,13 +385,13 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     bool waveParsed = false;
     const QString decoded = decodeTextSmart(packet);
     const QString raw = decoded.trimmed();
-    if (m_useWaveRegex && tryParseWaveValues(raw, waveValues) && !waveValues.isEmpty()) {
-        updateWaveformValues(waveValues);
-        waveParsed = true;
+    if (m_useWaveRegex) {
+        if (tryParseWaveValues(raw, waveValues) && !waveValues.isEmpty()) {
+            updateWaveformValues(waveValues);
+            waveParsed = true;
+        }
     }
-    if (!waveParsed && m_waveWorker) {
-        QMetaObject::invokeMethod(m_waveWorker, "appendData", Qt::QueuedConnection, Q_ARG(QByteArray, packet));
-    }
+    // 当未启用波形正则或未能成功解析时，不再按字节值灌入波形，避免显示三角波
 
     if (m_attLabel) {
         if (!raw.isEmpty()) {
@@ -732,10 +734,41 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
-    if (isWave && event->type() == QEvent::MouseButtonPress) {
-        QMouseEvent *me = static_cast<QMouseEvent*>(event);
-        if (me->button() == Qt::LeftButton && !(me->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier))) {
-            m_waveAutoFollow = false;
+    if (isWave) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            QMouseEvent *me = static_cast<QMouseEvent*>(event);
+            if (me->button() == Qt::LeftButton && !(me->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier))) {
+                m_waveAutoFollow = false;
+            }
+        } else if (event->type() == QEvent::MouseMove) {
+            QMouseEvent *me = static_cast<QMouseEvent*>(event);
+            if (m_waveGraph && !m_waveData.isEmpty()) {
+                const double xCoord = m_wavePlot->xAxis->pixelToCoord(me->pos().x());
+                double bestDist = std::numeric_limits<double>::max();
+                QCPGraphData best;
+                for (const auto &d : m_waveData) {
+                    double dist = std::abs(d.key - xCoord);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        best = d;
+                    }
+                }
+                if (bestDist != std::numeric_limits<double>::max()) {
+                    QString tip = QStringLiteral("x: %1\ny: %2")
+                                      .arg(QString::number(best.key, 'f', 0))
+                                      .arg(QString::number(best.value, 'f', 3));
+                    QToolTip::showText(me->globalPos(), tip, m_wavePlot);
+                }
+            }
+        } else if (event->type() == QEvent::MouseButtonRelease) {
+            if (m_waveAutoFollow) return false;
+            if (!m_waveData.isEmpty() && m_wavePlot && m_wavePlot->xAxis) {
+                const double lastX = m_waveData.last().key;
+                const double viewRight = m_wavePlot->xAxis->range().upper;
+                if (viewRight >= lastX - 1e-6) {
+                    m_waveAutoFollow = true;
+                }
+            }
         }
     }
     return QMainWindow::eventFilter(watched, event);
