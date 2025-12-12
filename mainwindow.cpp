@@ -22,6 +22,7 @@
 #include <QStatusBar>
 #include <QTextEdit>
 #include <QTextStream>
+#include <QStringDecoder>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QStackedLayout>
@@ -140,6 +141,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_recvAutoFollow = true;
         m_rxBytes = 0;
         updateStatusLabels();
+        m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
     });
     // 搜索栏与快捷键
     QShortcut* findShortcut = new QShortcut(QKeySequence::Find, ui->recvEdit);
@@ -379,7 +381,8 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
 {
     QVector<double> waveValues;
     bool waveParsed = false;
-    QString raw = decodeTextSmart(packet).trimmed();
+    const QString decoded = decodeTextSmart(packet);
+    const QString raw = decoded.trimmed();
     if (m_useWaveRegex && tryParseWaveValues(raw, waveValues) && !waveValues.isEmpty()) {
         updateWaveformValues(waveValues);
         waveParsed = true;
@@ -405,7 +408,7 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     }
     if (m_attWorker) {
         double r, p, y;
-        if (tryParseAttitude(packet, r, p, y)) {
+        if (tryParseAttitude(raw, r, p, y)) {
             QMetaObject::invokeMethod(m_attWorker, "appendAttitude", Qt::QueuedConnection,
                                       Q_ARG(double, r), Q_ARG(double, p), Q_ARG(double, y));
         }
@@ -425,8 +428,7 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     if (ui->chk_rev_hex->isChecked()) {
         line += formatAsHex(packet).toHtmlEscaped();
     } else {
-        QString plain = decodeTextSmart(packet);
-        QString htmlBody = plain.toHtmlEscaped();
+        QString htmlBody = decoded.toHtmlEscaped();
         htmlBody.replace(QStringLiteral("\r\n"), QStringLiteral("<br/>"));
         htmlBody.replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
         line += htmlBody;
@@ -490,6 +492,7 @@ void MainWindow::onPortOpened()
     m_isPortOpen = true;
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
+    m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
     updateRecvSearchHighlights();
     if (QScrollBar* vs = ui->recvEdit->verticalScrollBar()) {
         vs->setValue(vs->maximum());
@@ -515,6 +518,7 @@ void MainWindow::onPortClosed()
     m_isPortOpen = false;
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
+    m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
     updateRecvSearchHighlights();
     ui->openBt->setText(QStringLiteral("打开串口"));
     ui->serialCb->setEnabled(true);
@@ -739,12 +743,9 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 QString MainWindow::decodeTextSmart(const QByteArray &data) const
 {
-    // Decode as UTF-8 first to preserve emoji/Unicode; fallback to local8Bit if invalid
-    QString utf8 = QString::fromUtf8(data);
-    if (utf8.toUtf8() == data) {
-        return utf8;
-    }
-    return QString::fromLocal8Bit(data);
+    // Streamed UTF-8 decoder to handle split packets without回退到本地编码
+    QString out = m_utf8Decoder.decode(data);
+    return out;
 }
 
 bool MainWindow::tryParseWaveValues(const QString &text, QVector<double> &values) const
@@ -935,7 +936,7 @@ void MainWindow::openFormatDialog()
     v->addWidget(waveEnable);
 
     QPlainTextEdit* waveEdit = new QPlainTextEdit(&dlg);
-    waveEdit->setPlaceholderText(QString::fromUtf8(u8"例：(-?\d+(?:\.\d+)?)"));
+    waveEdit->setPlaceholderText(QString::fromUtf8(u8"例：(-?\\\\d+(?:\\\\.\\\\d+)?)"));
     waveEdit->setPlainText(m_waveRegexList.join(QStringLiteral("\n")));
     waveEdit->setFixedHeight(100);
     v->addWidget(waveEdit);
@@ -945,7 +946,7 @@ void MainWindow::openFormatDialog()
     v->addWidget(attEnable);
 
     QLineEdit* attEdit = new QLineEdit(&dlg);
-    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)"));
+    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：([-+]?\\\\d+(?:\\\\.\\\\d+)?)[,\\\\s]+([-+]?\\\\d+(?:\\\\.\\\\d+)?)[,\\\\s]+([-+]?\\\\d+(?:\\\\.\\\\d+)?)"));
     attEdit->setText(m_attRegex);
     v->addWidget(attEdit);
 
@@ -954,7 +955,7 @@ void MainWindow::openFormatDialog()
     v->addWidget(customLabel);
 
     QPlainTextEdit* customEdit = new QPlainTextEdit(&dlg);
-    customEdit->setPlaceholderText(QString::fromUtf8(u8"示例：\nvolt: ([\d.]+)\namp: ([\d.]+)"));
+    customEdit->setPlaceholderText(QString::fromUtf8(u8"示例：\\nvolt: ([\\\\d.]+)\\namp: ([\\\\d.]+)"));
     customEdit->setPlainText(m_customRegexList.join(QStringLiteral("\n")));
     customEdit->setFixedHeight(120);
     v->addWidget(customEdit);
@@ -1204,9 +1205,9 @@ void MainWindow::updateAttitude(double rollDeg, double pitchDeg, double yawDeg)
     }
 }
 
-bool MainWindow::tryParseAttitude(const QByteArray &packet, double &roll, double &pitch, double &yaw) const
+bool MainWindow::tryParseAttitude(const QString &text, double &roll, double &pitch, double &yaw) const
 {
-    QString str = decodeTextSmart(packet).trimmed();
+    QString str = text.trimmed();
     if (m_useAttRegex && !m_attRegex.isEmpty()) {
         QRegularExpression re(m_attRegex);
         QRegularExpressionMatch m = re.match(str);

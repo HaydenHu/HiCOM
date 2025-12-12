@@ -18,6 +18,7 @@
 #include <QLineEdit>
 #include <QToolButton>
 #include <QShortcut>
+#include <QStringDecoder>
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QPhongMaterial>
@@ -117,6 +118,7 @@ private:
     QToolButton* m_recvSearchClose = nullptr;
     QToolButton* m_recvSearchNext = nullptr;
     QToolButton* m_recvSearchPrev = nullptr;
+    mutable QStringDecoder m_utf8Decoder{QStringDecoder::Utf8};
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
@@ -134,7 +136,7 @@ private:
     void updateWaveformValues(const QVector<double>& values);
     void setup3DTab();
     void updateAttitude(double rollDeg, double pitchDeg, double yawDeg);
-    bool tryParseAttitude(const QByteArray& packet, double &roll, double &pitch, double &yaw) const;
+    bool tryParseAttitude(const QString& text, double &roll, double &pitch, double &yaw) const;
     bool tryParseWaveValues(const QString &text, QVector<double> &values) const;
     void updateCustomMatchDisplay(const QString &text);
     QVector<int> parseIndexSpec(const QString &spec, int maxCount) const;
