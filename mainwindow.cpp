@@ -601,10 +601,8 @@ void MainWindow::updateStatusLabels()
     if (m_statusRx) {
         m_statusRx->setText(QStringLiteral("RX: %1").arg(m_rxBytes));
     }
-    if (m_statusMatch) {
-        if (!m_isPortOpen || m_statusMatch->text().isEmpty()) {
-            m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
-        }
+    if (m_statusMatch && !m_isPortOpen) {
+        m_statusMatch->clear();
     }
     if (m_statusTx) {
         m_statusTx->setText(QStringLiteral("TX: %1").arg(m_txBytes));
@@ -769,24 +767,26 @@ void MainWindow::updateCustomMatchDisplay(const QString &text)
 {
     if (!m_statusMatch) return;
     if (!m_isPortOpen) {
-        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        m_statusMatch->clear();
         return;
     }
     if (m_customRegexList.isEmpty()) {
-        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        m_statusMatch->clear();
         return;
     }
     const QVector<int> enabled = parseIndexSpec(m_customRegexEnableSpec, m_customRegexList.size());
-    if (enabled.isEmpty()) {
-        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
-        return;
+    QVector<int> finalIdx = enabled;
+    if (finalIdx.isEmpty()) {
+        finalIdx.reserve(m_customRegexList.size());
+        for (int i = 0; i < m_customRegexList.size(); ++i) finalIdx.append(i + 1);
     }
 
     QStringList hits;
-    for (int idx : enabled) {
+    for (int idx : finalIdx) {
         const QString pattern = m_customRegexList.value(idx - 1).trimmed();
         if (pattern.isEmpty()) continue;
-        QRegularExpression re(pattern);
+        QRegularExpression re(pattern, QRegularExpression::MultilineOption);
+        if (!re.isValid()) continue;
         QRegularExpressionMatchIterator it = re.globalMatch(text);
         while (it.hasNext()) {
             QRegularExpressionMatch m = it.next();
@@ -801,13 +801,13 @@ void MainWindow::updateCustomMatchDisplay(const QString &text)
     }
 
     if (hits.isEmpty()) {
-        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        m_statusMatch->clear();
     } else {
         QString joined = hits.join(QString::fromUtf8(u8" | "));
         if (joined.size() > 200) {
             joined = joined.left(197) + QStringLiteral("...");
         }
-        m_statusMatch->setText(QString::fromUtf8(u8"匹配: %1").arg(joined));
+        m_statusMatch->setText(joined);
     }
 }
 
