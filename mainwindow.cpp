@@ -387,10 +387,14 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     if (ui->chk_rev_hex->isChecked()) {
         line += formatAsHex(packet).toHtmlEscaped();
     } else {
-        line += decodeTextSmart(packet).toHtmlEscaped();
+        QString plain = decodeTextSmart(packet);
+        QString htmlBody = plain.toHtmlEscaped();
+        htmlBody.replace(QStringLiteral("\r\n"), QStringLiteral("<br/>"));
+        htmlBody.replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
+        line += htmlBody;
     }
     if (ui->chk_rev_line->isChecked()) {
-        line += QLatin1Char('\n');
+        line += QStringLiteral("<br/>");
     }
 
     QScrollBar* vs = ui->recvEdit->verticalScrollBar();
