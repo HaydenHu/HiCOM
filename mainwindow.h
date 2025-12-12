@@ -107,8 +107,8 @@ private:
     QString m_attRegex;
     QStringList m_customRegexList;
     QString m_customRegexEnableSpec;
-    bool m_useWaveRegex = true;
-    bool m_useAttRegex = true;
+    bool m_useWaveRegex = false;
+    bool m_useAttRegex = false;
     QToolButton* m_formatBtn = nullptr;
     bool m_recvAutoFollow = true;
     bool m_inRecvAppend = false;

@@ -241,7 +241,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 默认正则
     m_waveRegexList = {QStringLiteral("(-?\\d+(?:\\.\\d+)?)")};
     m_attRegex = QStringLiteral("([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)");
-    m_customRegexEnableSpec = QStringLiteral("1-7");
+    m_customRegexEnableSpec = QStringLiteral("0");
 
     // 右上角格式按钮，打开设置弹窗
     m_formatBtn = new QToolButton(this);
@@ -408,7 +408,7 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     }
     if (m_attWorker) {
         double r, p, y;
-        if (tryParseAttitude(raw, r, p, y)) {
+        if (tryParseAttitude(decoded, r, p, y)) {
             QMetaObject::invokeMethod(m_attWorker, "appendAttitude", Qt::QueuedConnection,
                                       Q_ARG(double, r), Q_ARG(double, p), Q_ARG(double, y));
         }
@@ -819,7 +819,12 @@ void MainWindow::updateCustomMatchDisplay(const QString &text)
         m_statusMatch->clear();
         return;
     }
-    const QVector<int> enabled = parseIndexSpec(m_customRegexEnableSpec, m_customRegexList.size());
+    const QString enableSpec = m_customRegexEnableSpec.trimmed();
+    if (enableSpec == QStringLiteral("0")) {
+        m_statusMatch->clear();
+        return;
+    }
+    const QVector<int> enabled = parseIndexSpec(enableSpec, m_customRegexList.size());
     QVector<int> finalIdx = enabled;
     if (finalIdx.isEmpty()) {
         finalIdx.reserve(m_customRegexList.size());
@@ -976,12 +981,12 @@ void MainWindow::openFormatDialog()
     v->addLayout(btns);
 
     connect(resetBtn, &QPushButton::clicked, [&]() {
-        waveEnable->setChecked(true);
-        attEnable->setChecked(true);
+        waveEnable->setChecked(false);
+        attEnable->setChecked(false);
         waveEdit->setPlainText(QStringLiteral("(-?\d+(?:\.\d+)?)"));
         attEdit->setText(QStringLiteral("([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)"));
         customEdit->clear();
-        customEnableEdit->setText(QStringLiteral("1-7"));
+        customEnableEdit->setText(QStringLiteral("0"));
     });
     connect(okBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
     connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
