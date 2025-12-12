@@ -72,6 +72,7 @@ private:
     QLabel* m_statusConn = nullptr;
     QLabel* m_statusRx = nullptr;
     QLabel* m_statusTx = nullptr;
+    QLabel* m_statusMatch = nullptr;
     QCustomPlot* m_wavePlot = nullptr;
     QCPGraph* m_waveGraph = nullptr;
     QVector<QCPGraphData> m_waveData;
@@ -102,9 +103,13 @@ private:
     int m_sendFontPt = 0;
     QStringList m_waveRegexList;
     QString m_attRegex;
+    QStringList m_customRegexList;
+    QString m_customRegexEnableSpec;
     bool m_useWaveRegex = true;
     bool m_useAttRegex = true;
     QToolButton* m_formatBtn = nullptr;
+    bool m_recvAutoFollow = true;
+    bool m_inRecvAppend = false;
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
@@ -124,6 +129,8 @@ private:
     void updateAttitude(double rollDeg, double pitchDeg, double yawDeg);
     bool tryParseAttitude(const QByteArray& packet, double &roll, double &pitch, double &yaw) const;
     bool tryParseWaveValues(const QString &text, QVector<double> &values) const;
+    void updateCustomMatchDisplay(const QString &text);
+    QVector<int> parseIndexSpec(const QString &spec, int maxCount) const;
     void openFormatDialog();
 };
 #endif // MAINWINDOW_H

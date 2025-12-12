@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
 #include <QCheckBox>
@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFontMetrics>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMutexLocker>
@@ -16,6 +17,7 @@
 #include <QMouseEvent>
 #include <QScrollBar>
 #include <QSerialPortInfo>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QTextEdit>
@@ -82,9 +84,14 @@ MainWindow::MainWindow(QWidget *parent)
     m_statusConn = new QLabel(this);
     m_statusRx = new QLabel(this);
     m_statusTx = new QLabel(this);
+    m_statusMatch = new QLabel(this);
+    m_statusMatch->setTextFormat(Qt::PlainText);
+    m_statusMatch->setMinimumWidth(200);
+    m_statusMatch->setAlignment(Qt::AlignCenter);
     m_enableDebug = (ENABLE_DEBUG_LOG != 0);
     updateStatusLabels();
     ui->statusbar->addWidget(m_statusConn);
+    ui->statusbar->addWidget(m_statusMatch, 1);
     ui->statusbar->addPermanentWidget(m_statusRx);
     ui->statusbar->addPermanentWidget(m_statusTx);
     m_recvFontPt = ui->recvEdit->font().pointSize();
@@ -103,7 +110,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->openBt, &QPushButton::clicked, this, &MainWindow::on_openButton_clicked);
     connect(ui->sendBt, &QPushButton::clicked, this, &MainWindow::on_sendButton_clicked);
     connect(ui->btnClearSend, &QPushButton::clicked, this, [this]() { ui->sendEdit->clear(); });
-    connect(ui->clearBt, &QPushButton::clicked, this, [this]() { ui->recvEdit->clear(); });
+    connect(ui->clearBt, &QPushButton::clicked, this, [this]() {
+        ui->recvEdit->clear();
+        m_recvAutoFollow = true;
+    });
     connect(ui->chkTimSend, &QCheckBox::toggled, this, [this](bool on) {
         m_autoSend = on;
         if (on) {
@@ -165,6 +175,25 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->serialCb, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
         updateSerialTooltip();
     });
+    if (QScrollBar* vs = ui->recvEdit->verticalScrollBar()) {
+        auto syncFollow = [this, vs](int value) {
+            if (m_inRecvAppend) return;
+            const bool atBottom = (value >= vs->maximum());
+            m_recvAutoFollow = atBottom;
+        };
+        connect(vs, &QScrollBar::valueChanged, this, syncFollow);
+        connect(vs, &QScrollBar::sliderReleased, this, [this, vs, syncFollow]() { syncFollow(vs->value()); });
+        connect(vs, &QScrollBar::sliderPressed, this, [this]() { m_recvAutoFollow = false; });
+        connect(vs, &QAbstractSlider::actionTriggered, this, [this, vs](int action) {
+            if (m_inRecvAppend) return;
+            if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderToMaximum) {
+                m_recvAutoFollow = false;
+            }
+            if (vs->value() >= vs->maximum()) {
+                m_recvAutoFollow = true;
+            }
+        });
+    }
 
     ui->btnSerialCheck->setText(QString::fromUtf8(u8"保存记录"));
     connect(ui->btnSerialCheck, &QPushButton::clicked, this, [this]() { saveLogs(); });
@@ -172,8 +201,9 @@ MainWindow::MainWindow(QWidget *parent)
     // 默认正则
     m_waveRegexList = {QStringLiteral("(-?\\d+(?:\\.\\d+)?)")};
     m_attRegex = QStringLiteral("([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)");
+    m_customRegexEnableSpec = QStringLiteral("1-7");
 
-    // 右上角标签栏放置“格式”齿轮按钮（打开弹窗）
+    // 右上角格式按钮，打开设置弹窗
     m_formatBtn = new QToolButton(this);
     m_formatBtn->setText(QString::fromUtf8(u8"⚙"));
     m_formatBtn->setToolTip(QString::fromUtf8(u8"格式设置"));
@@ -311,7 +341,6 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
         QMetaObject::invokeMethod(m_waveWorker, "appendData", Qt::QueuedConnection, Q_ARG(QByteArray, packet));
     }
 
-    // 3D姿态：先在标签显示原始文本，方便排查；若能解析则再发给姿态线程
     if (m_attLabel) {
         if (!raw.isEmpty()) {
             QString display = raw;
@@ -337,6 +366,7 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
 
     m_rxBytes += packet.size();
     updateStatusLabels();
+    updateCustomMatchDisplay(raw);
 
     QString line;
     if (ui->chk_rev_time->isChecked()) {
@@ -353,7 +383,24 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     if (ui->chk_rev_line->isChecked()) {
         line += QLatin1Char('\n');
     }
+
+    QScrollBar* vs = ui->recvEdit->verticalScrollBar();
+    int restorePos = -1;
+    if (vs && !m_recvAutoFollow) restorePos = vs->value();
+
+    m_inRecvAppend = true;
     ui->recvEdit->append(line);
+    m_inRecvAppend = false;
+
+    if (m_recvAutoFollow) {
+        QTextCursor c = ui->recvEdit->textCursor();
+        c.movePosition(QTextCursor::End);
+        ui->recvEdit->setTextCursor(c);
+        ui->recvEdit->ensureCursorVisible();
+    } else if (vs && restorePos >= 0) {
+        QSignalBlocker block(vs);
+        vs->setValue(restorePos);
+    }
 }
 
 void MainWindow::onErrorOccurred(const QString &error)
@@ -369,13 +416,22 @@ void MainWindow::onFatalError(const QString &error)
     ui->recvEdit->append(QStringLiteral("<span style=\"color:red;\">[FATAL] %1</span>")
                              .arg(error.toHtmlEscaped()));
     m_isPortOpen = false;
-    ui->openBt->setText(QString::fromUtf8(u8"打开串口"));
+    ui->openBt->setText(QStringLiteral("Open Port"));
 }
 
 void MainWindow::onPortOpened()
 {
     m_isPortOpen = true;
-    ui->openBt->setText(QString::fromUtf8(u8"关闭串口"));
+    m_recvAutoFollow = true;
+    m_inRecvAppend = false;
+    if (QScrollBar* vs = ui->recvEdit->verticalScrollBar()) {
+        vs->setValue(vs->maximum());
+    }
+    QTextCursor c = ui->recvEdit->textCursor();
+    c.movePosition(QTextCursor::End);
+    ui->recvEdit->setTextCursor(c);
+    ui->recvEdit->ensureCursorVisible();
+    ui->openBt->setText(QStringLiteral("关闭串口"));
     ui->serialCb->setEnabled(false);
     ui->baundrateCb->setEnabled(false);
     ui->databitCb->setEnabled(false);
@@ -390,7 +446,9 @@ void MainWindow::onPortOpened()
 void MainWindow::onPortClosed()
 {
     m_isPortOpen = false;
-    ui->openBt->setText(QString::fromUtf8(u8"打开串口"));
+    m_recvAutoFollow = true;
+    m_inRecvAppend = false;
+    ui->openBt->setText(QStringLiteral("打开串口"));
     ui->serialCb->setEnabled(true);
     ui->baundrateCb->setEnabled(true);
     ui->databitCb->setEnabled(true);
@@ -420,7 +478,7 @@ QByteArray MainWindow::buildSendPayload(const QString &text) const
         return data;
     }
 
-    // 文本模式按 UTF-8 编码发送，emoji/中文等多字节字符才能完整传输
+    // 文本模式?UTF-8 编码发送，emoji/中文等多字节字符才能完整传输
     return content.toUtf8();
 }
 
@@ -519,6 +577,11 @@ void MainWindow::updateStatusLabels()
     if (m_statusRx) {
         m_statusRx->setText(QStringLiteral("RX: %1").arg(m_rxBytes));
     }
+    if (m_statusMatch) {
+        if (!m_isPortOpen || m_statusMatch->text().isEmpty()) {
+            m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        }
+    }
     if (m_statusTx) {
         m_statusTx->setText(QStringLiteral("TX: %1").arg(m_txBytes));
     }
@@ -541,7 +604,7 @@ void MainWindow::saveLogs()
     const QString path = QFileDialog::getSaveFileName(
         this, QString::fromUtf8(u8"保存记录"),
         QDir::homePath() + QLatin1String("/hicom_log_") + QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".txt",
-        QStringLiteral("Text Files (*.txt);;All Files (*.*)"));
+        QString::fromUtf8(u8"文本文件 (*.txt);;所有文件 (*.*)"));
     if (path.isEmpty()) return;
 
     QFile file(path);
@@ -559,7 +622,6 @@ void MainWindow::saveLogs()
 
     QMessageBox::information(this, QString::fromUtf8(u8"保存完成"), QString::fromUtf8(u8"已保存到：\n") + path);
 }
-
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
     const bool isRecv = (watched == ui->recvEdit || watched == ui->recvEdit->viewport() ||
@@ -587,6 +649,17 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                 ui->sendEdit->setFont(f);
             }
             return true; // consume to avoid scroll
+        } else if (isRecv) {
+            // 用户滚动接收区：立即暂停自动跟随
+            m_recvAutoFollow = false;
+            return false;
+        }
+    }
+    if (isRecv && (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseMove)) {
+        if (QMouseEvent* me = static_cast<QMouseEvent*>(event)) {
+            if (me->buttons() & Qt::LeftButton) {
+                m_recvAutoFollow = false;
+            }
         }
     }
     if (isWave && event->type() == QEvent::MouseButtonPress) {
@@ -600,7 +673,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 QString MainWindow::decodeTextSmart(const QByteArray &data) const
 {
-    // 优先按 UTF-8 解码，确保收到的 emoji/中文正确显示，失败再退回本地编码
+    // Decode as UTF-8 first to preserve emoji/Unicode; fallback to local8Bit if invalid
     QString utf8 = QString::fromUtf8(data);
     if (utf8.toUtf8() == data) {
         return utf8;
@@ -638,19 +711,95 @@ bool MainWindow::tryParseWaveValues(const QString &text, QVector<double> &values
     return false;
 }
 
+QVector<int> MainWindow::parseIndexSpec(const QString &spec, int maxCount) const
+{
+    QVector<int> result;
+    const QStringList tokens = spec.split(',', Qt::SkipEmptyParts);
+    for (QString token : tokens) {
+        token = token.trimmed();
+        if (token.contains('-')) {
+            const QStringList parts = token.split('-', Qt::SkipEmptyParts);
+            if (parts.size() == 2) {
+                bool ok1 = false, ok2 = false;
+                int a = parts.at(0).toInt(&ok1);
+                int b = parts.at(1).toInt(&ok2);
+                if (ok1 && ok2) {
+                    if (a > b) std::swap(a, b);
+                    for (int i = a; i <= b; ++i) {
+                        if (i >= 1 && i <= maxCount) result.append(i);
+                    }
+                }
+            }
+        } else {
+            bool ok = false;
+            int v = token.toInt(&ok);
+            if (ok && v >= 1 && v <= maxCount) result.append(v);
+        }
+    }
+    std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    return result;
+}
+
+void MainWindow::updateCustomMatchDisplay(const QString &text)
+{
+    if (!m_statusMatch) return;
+    if (!m_isPortOpen) {
+        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        return;
+    }
+    if (m_customRegexList.isEmpty()) {
+        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        return;
+    }
+    const QVector<int> enabled = parseIndexSpec(m_customRegexEnableSpec, m_customRegexList.size());
+    if (enabled.isEmpty()) {
+        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+        return;
+    }
+
+    QStringList hits;
+    for (int idx : enabled) {
+        const QString pattern = m_customRegexList.value(idx - 1).trimmed();
+        if (pattern.isEmpty()) continue;
+        QRegularExpression re(pattern);
+        QRegularExpressionMatchIterator it = re.globalMatch(text);
+        while (it.hasNext()) {
+            QRegularExpressionMatch m = it.next();
+            QString captured;
+            if (m.lastCapturedIndex() >= 1) {
+                captured = m.captured(1);
+            } else {
+                captured = m.captured(0);
+            }
+            if (!captured.isEmpty()) hits << captured;
+        }
+    }
+
+    if (hits.isEmpty()) {
+        m_statusMatch->setText(QString::fromUtf8(u8"匹配: -"));
+    } else {
+        QString joined = hits.join(QString::fromUtf8(u8" | "));
+        if (joined.size() > 200) {
+            joined = joined.left(197) + QStringLiteral("...");
+        }
+        m_statusMatch->setText(QString::fromUtf8(u8"匹配: %1").arg(joined));
+    }
+}
+
 void MainWindow::openFormatDialog()
 {
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8(u8"格式设置"));
     QVBoxLayout* v = new QVBoxLayout(&dlg);
 
-    QCheckBox* waveEnable = new QCheckBox(QString::fromUtf8(u8"启用自定义波形正则（一行一个，使用第一个匹配到的组或整个匹配值）"), &dlg);
+    QCheckBox* waveEnable = new QCheckBox(QString::fromUtf8(u8"启用自定义波形正则（一行一个，使用第一个捕获组或整段匹配）"), &dlg);
     waveEnable->setChecked(m_useWaveRegex);
     v->addWidget(waveEnable);
 
     QPlainTextEdit* waveEdit = new QPlainTextEdit(&dlg);
-    waveEdit->setPlaceholderText(QString::fromUtf8(u8"例：(-?\\d+(?:\\.\\d+)?)"));
-    waveEdit->setPlainText(m_waveRegexList.join("\n"));
+    waveEdit->setPlaceholderText(QString::fromUtf8(u8"例：(-?\d+(?:\.\d+)?)"));
+    waveEdit->setPlainText(m_waveRegexList.join(QStringLiteral("\n")));
     waveEdit->setFixedHeight(100);
     v->addWidget(waveEdit);
 
@@ -659,9 +808,24 @@ void MainWindow::openFormatDialog()
     v->addWidget(attEnable);
 
     QLineEdit* attEdit = new QLineEdit(&dlg);
-    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)"));
+    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)"));
     attEdit->setText(m_attRegex);
     v->addWidget(attEdit);
+
+    QLabel* customLabel = new QLabel(QString::fromUtf8(u8"自定义匹配正则（每行一条，优先使用第一个捕获组，否则使用整段匹配；结果在状态栏以“|”分隔显示）"), &dlg);
+    customLabel->setWordWrap(true);
+    v->addWidget(customLabel);
+
+    QPlainTextEdit* customEdit = new QPlainTextEdit(&dlg);
+    customEdit->setPlaceholderText(QString::fromUtf8(u8"示例：\nvolt: ([\d.]+)\namp: ([\d.]+)"));
+    customEdit->setPlainText(m_customRegexList.join(QStringLiteral("\n")));
+    customEdit->setFixedHeight(120);
+    v->addWidget(customEdit);
+
+    QLineEdit* customEnableEdit = new QLineEdit(&dlg);
+    customEnableEdit->setPlaceholderText(QString::fromUtf8(u8"启用哪些规则，例如 1-3 或 1,2,5"));
+    customEnableEdit->setText(m_customRegexEnableSpec);
+    v->addWidget(customEnableEdit);
 
     QHBoxLayout* btns = new QHBoxLayout;
     QPushButton* resetBtn = new QPushButton(QString::fromUtf8(u8"恢复默认"), &dlg);
@@ -676,8 +840,10 @@ void MainWindow::openFormatDialog()
     connect(resetBtn, &QPushButton::clicked, [&]() {
         waveEnable->setChecked(true);
         attEnable->setChecked(true);
-        waveEdit->setPlainText(QStringLiteral("(-?\\d+(?:\\.\\d+)?)"));
-        attEdit->setText(QStringLiteral("([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)"));
+        waveEdit->setPlainText(QStringLiteral("(-?\d+(?:\.\d+)?)"));
+        attEdit->setText(QStringLiteral("([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)"));
+        customEdit->clear();
+        customEnableEdit->setText(QStringLiteral("1-7"));
     });
     connect(okBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
     connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
@@ -685,12 +851,15 @@ void MainWindow::openFormatDialog()
     if (dlg.exec() == QDialog::Accepted) {
         m_useWaveRegex = waveEnable->isChecked();
         m_useAttRegex = attEnable->isChecked();
-        m_waveRegexList = waveEdit->toPlainText().split('\n', Qt::SkipEmptyParts);
+        m_waveRegexList = waveEdit->toPlainText().split("\n", Qt::SkipEmptyParts);
         for (QString &s : m_waveRegexList) s = s.trimmed();
         m_attRegex = attEdit->text().trimmed();
+        m_customRegexList = customEdit->toPlainText().split("\n", Qt::SkipEmptyParts);
+        for (QString &s : m_customRegexList) s = s.trimmed();
+        m_customRegexEnableSpec = customEnableEdit->text().trimmed();
+        updateCustomMatchDisplay(QString());
     }
 }
-
 void MainWindow::setupWaveformTab()
 {
     QWidget *waveTab = ui->tabWidget->findChild<QWidget*>("tab_waveform");
@@ -872,7 +1041,7 @@ void MainWindow::setup3DTab()
 
     m_3dWindow->setRootEntity(m_3dRoot);
 
-    // Label条放在上方，保证不被 createWindowContainer 遮挡
+    // Keep label above to avoid being covered by createWindowContainer
     m_attLabel = new QLabel(QString::fromUtf8(u8"Roll: 0   Pitch: 0   Yaw: 0"), m_tab3d);
     m_attLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_attLabel->setMinimumHeight(24);
