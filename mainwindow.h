@@ -17,6 +17,7 @@
 #include <QPlainTextEdit>
 #include <QLineEdit>
 #include <QToolButton>
+#include <QShortcut>
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QPhongMaterial>
@@ -111,6 +112,11 @@ private:
     bool m_recvAutoFollow = true;
     bool m_inRecvAppend = false;
     int m_recvColorToken = 0;
+    QWidget* m_recvSearchPanel = nullptr;
+    QLineEdit* m_recvSearchEdit = nullptr;
+    QToolButton* m_recvSearchClose = nullptr;
+    QToolButton* m_recvSearchNext = nullptr;
+    QToolButton* m_recvSearchPrev = nullptr;
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
@@ -133,5 +139,9 @@ private:
     void updateCustomMatchDisplay(const QString &text);
     QVector<int> parseIndexSpec(const QString &spec, int maxCount) const;
     void openFormatDialog();
+    void showRecvSearch();
+    void hideRecvSearch();
+    void updateRecvSearchHighlights();
+    void findInRecv(bool backward);
 };
 #endif // MAINWINDOW_H

@@ -88,6 +88,27 @@ MainWindow::MainWindow(QWidget *parent)
     m_statusMatch->setTextFormat(Qt::PlainText);
     m_statusMatch->setMinimumWidth(200);
     m_statusMatch->setAlignment(Qt::AlignCenter);
+    m_recvSearchPanel = new QWidget(this);
+    {
+        auto h = new QHBoxLayout(m_recvSearchPanel);
+        h->setContentsMargins(4, 0, 4, 0);
+        h->setSpacing(4);
+        QLabel* lbl = new QLabel(QString::fromUtf8(u8"搜索"), m_recvSearchPanel);
+        m_recvSearchEdit = new QLineEdit(m_recvSearchPanel);
+        m_recvSearchEdit->setPlaceholderText(QString::fromUtf8(u8"在接收区查找，按 Enter 查找下一个"));
+        m_recvSearchPrev = new QToolButton(m_recvSearchPanel);
+        m_recvSearchPrev->setText(QStringLiteral("▲"));
+        m_recvSearchNext = new QToolButton(m_recvSearchPanel);
+        m_recvSearchNext->setText(QStringLiteral("▼"));
+        m_recvSearchClose = new QToolButton(m_recvSearchPanel);
+        m_recvSearchClose->setText(QStringLiteral("✕"));
+        h->addWidget(lbl);
+        h->addWidget(m_recvSearchEdit, 1);
+        h->addWidget(m_recvSearchPrev);
+        h->addWidget(m_recvSearchNext);
+        h->addWidget(m_recvSearchClose);
+        m_recvSearchPanel->setVisible(false);
+    }
     m_enableDebug = (ENABLE_DEBUG_LOG != 0);
     updateStatusLabels();
     ui->statusbar->addWidget(m_statusConn);
@@ -120,6 +141,14 @@ MainWindow::MainWindow(QWidget *parent)
         m_rxBytes = 0;
         updateStatusLabels();
     });
+    // 搜索栏与快捷键
+    QShortcut* findShortcut = new QShortcut(QKeySequence::Find, ui->recvEdit);
+    connect(findShortcut, &QShortcut::activated, this, [this]() { showRecvSearch(); });
+    connect(m_recvSearchClose, &QToolButton::clicked, this, [this]() { hideRecvSearch(); });
+    connect(m_recvSearchNext, &QToolButton::clicked, this, [this]() { findInRecv(false); });
+    connect(m_recvSearchPrev, &QToolButton::clicked, this, [this]() { findInRecv(true); });
+    connect(m_recvSearchEdit, &QLineEdit::returnPressed, this, [this]() { findInRecv(false); });
+    connect(m_recvSearchEdit, &QLineEdit::textChanged, this, [this]() { updateRecvSearchHighlights(); });
     connect(ui->chkTimSend, &QCheckBox::toggled, this, [this](bool on) {
         m_autoSend = on;
         if (on) {
@@ -218,12 +247,21 @@ MainWindow::MainWindow(QWidget *parent)
     m_formatBtn->setToolTip(QString::fromUtf8(u8"格式设置"));
     m_formatBtn->setAutoRaise(true);
     m_formatBtn->setFixedSize(24, 24);
+    connect(m_formatBtn, &QToolButton::clicked, this, &MainWindow::openFormatDialog);
+
+    // 右上角工具栏：搜索 + 格式按钮
     if (ui->tabWidget) {
-        ui->tabWidget->setCornerWidget(m_formatBtn, Qt::TopRightCorner);
+        QWidget* corner = new QWidget(this);
+        auto cornerLayout = new QHBoxLayout(corner);
+        cornerLayout->setContentsMargins(0, 0, 0, 0);
+        cornerLayout->setSpacing(4);
+        cornerLayout->addWidget(m_recvSearchPanel);
+        cornerLayout->addWidget(m_formatBtn);
+        ui->tabWidget->setCornerWidget(corner, Qt::TopRightCorner);
     } else {
+        ui->statusbar->addPermanentWidget(m_recvSearchPanel);
         ui->statusbar->addPermanentWidget(m_formatBtn);
     }
-    connect(m_formatBtn, &QToolButton::clicked, this, &MainWindow::openFormatDialog);
 
     setup3DTab();
 }
@@ -452,6 +490,7 @@ void MainWindow::onPortOpened()
     m_isPortOpen = true;
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
+    updateRecvSearchHighlights();
     if (QScrollBar* vs = ui->recvEdit->verticalScrollBar()) {
         vs->setValue(vs->maximum());
     }
@@ -476,6 +515,7 @@ void MainWindow::onPortClosed()
     m_isPortOpen = false;
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
+    updateRecvSearchHighlights();
     ui->openBt->setText(QStringLiteral("打开串口"));
     ui->serialCb->setEnabled(true);
     ui->baundrateCb->setEnabled(true);
@@ -813,6 +853,75 @@ void MainWindow::updateCustomMatchDisplay(const QString &text)
         }
         m_statusMatch->setText(joined);
     }
+}
+
+void MainWindow::showRecvSearch()
+{
+    if (!m_recvSearchPanel || !m_recvSearchEdit) return;
+    m_recvSearchPanel->setVisible(true);
+    m_recvSearchEdit->setFocus(Qt::ShortcutFocusReason);
+    m_recvSearchEdit->selectAll();
+    updateRecvSearchHighlights();
+}
+
+void MainWindow::hideRecvSearch()
+{
+    if (!m_recvSearchPanel || !m_recvSearchEdit) return;
+    m_recvSearchPanel->setVisible(false);
+    m_recvSearchEdit->clear();
+    ui->recvEdit->setExtraSelections({});
+}
+
+void MainWindow::updateRecvSearchHighlights()
+{
+    if (!ui || !ui->recvEdit) return;
+    const QString pattern = m_recvSearchEdit ? m_recvSearchEdit->text() : QString();
+    QList<QTextEdit::ExtraSelection> sels;
+    if (!pattern.isEmpty()) {
+        QRegularExpression re(QRegularExpression::escape(pattern), QRegularExpression::CaseInsensitiveOption);
+        if (re.isValid()) {
+            QTextDocument* doc = ui->recvEdit->document();
+            QTextCursor c(doc);
+            while (true) {
+                c = doc->find(re, c);
+                if (c.isNull()) break;
+                QTextEdit::ExtraSelection s;
+                s.cursor = c;
+                QTextCharFormat fmt;
+                fmt.setBackground(QColor(255, 230, 128));
+                s.format = fmt;
+                sels.append(s);
+            }
+        }
+    }
+    ui->recvEdit->setExtraSelections(sels);
+}
+
+void MainWindow::findInRecv(bool backward)
+{
+    if (!ui || !ui->recvEdit) return;
+    const QString pattern = m_recvSearchEdit ? m_recvSearchEdit->text() : QString();
+    if (pattern.isEmpty()) {
+        updateRecvSearchHighlights();
+        return;
+    }
+
+    QTextDocument::FindFlags flags;
+    if (backward) flags |= QTextDocument::FindBackward;
+
+    QTextCursor cursor = ui->recvEdit->textCursor();
+    if (!backward) {
+        cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor);
+    } else {
+        cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor);
+    }
+    QTextCursor found = ui->recvEdit->document()->find(QRegularExpression(QRegularExpression::escape(pattern)), cursor, flags);
+    if (!found.isNull()) {
+        ui->recvEdit->setTextCursor(found);
+        ui->recvEdit->ensureCursorVisible();
+        m_recvAutoFollow = false;
+    }
+    updateRecvSearchHighlights();
 }
 
 void MainWindow::openFormatDialog()
