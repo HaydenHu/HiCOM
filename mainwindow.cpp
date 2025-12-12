@@ -34,9 +34,11 @@
 #include <Qt3DExtras/QCuboidMesh>
 #include <Qt3DExtras/QConeMesh>
 #include <Qt3DExtras/QCylinderMesh>
+#include <Qt3DExtras/QPlaneMesh>
 #include <Qt3DExtras/QOrbitCameraController>
 #include <Qt3DCore/QTransform>
 #include <Qt3DRender/QCamera>
+#include <Qt3DRender/QDirectionalLight>
 #include <Qt3DExtras/QForwardRenderer>
 #include <algorithm>
 
@@ -144,6 +146,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_rxBytes = 0;
         updateStatusLabels();
         m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
+        m_hasAttData = false;
     });
     // 搜索栏与快捷键
     QShortcut* findShortcut = new QShortcut(QKeySequence::Find, ui->recvEdit);
@@ -242,7 +245,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 默认正则
     m_waveRegexList = {QStringLiteral("(-?\\d+(?:\\.\\d+)?)")};
-    m_attRegex = QStringLiteral("([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)");
+    m_attRegex = QStringLiteral("Roll:\\s*([-+]?\\d+(?:\\.\\d+)?)\\s+Pitch:\\s*([-+]?\\d+(?:\\.\\d+)?)\\s+Yaw:\\s*([-+]?\\d+(?:\\.\\d+)?)");
     m_customRegexEnableSpec = QStringLiteral("0");
 
     // 右上角格式按钮，打开设置弹窗
@@ -393,22 +396,8 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     }
     // 当未启用波形正则或未能成功解析时，不再按字节值灌入波形，避免显示三角波
 
-    if (m_attLabel) {
-        if (!raw.isEmpty()) {
-            QString display = raw;
-            if (display.size() > 80) display = display.left(77) + "...";
-            const QStringList parts = display.split(QRegularExpression(QStringLiteral("[,\\s]+")),
-                                                    Qt::SkipEmptyParts);
-            if (parts.size() >= 3) {
-                display = QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
-                              .arg(parts.at(0))
-                              .arg(parts.at(1))
-                              .arg(parts.at(2));
-            }
-            m_attLabel->setText(display);
-        }
-    }
-    if (m_attWorker) {
+    // 姿态显示只由解析结果更新，避免原始文本闪烁
+    if (m_attWorker && m_useAttRegex) {
         double r, p, y;
         if (tryParseAttitude(decoded, r, p, y)) {
             QMetaObject::invokeMethod(m_attWorker, "appendAttitude", Qt::QueuedConnection,
@@ -495,6 +484,8 @@ void MainWindow::onPortOpened()
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
     m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
+    m_hasAttData = false;
+    m_lastAttText.clear();
     updateRecvSearchHighlights();
     if (QScrollBar* vs = ui->recvEdit->verticalScrollBar()) {
         vs->setValue(vs->maximum());
@@ -521,6 +512,8 @@ void MainWindow::onPortClosed()
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
     m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
+    m_hasAttData = false;
+    m_lastAttText.clear();
     updateRecvSearchHighlights();
     ui->openBt->setText(QStringLiteral("打开串口"));
     ui->serialCb->setEnabled(true);
@@ -734,6 +727,55 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
+    if (watched == m_3dContainer || watched == m_3dWindow) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            if (QMouseEvent* me = static_cast<QMouseEvent*>(event)) {
+                if (me->button() == Qt::RightButton) {
+                    m_attViewPaused = true;
+                    m_attPauseSeq = m_attUpdateSeq;
+                    m_attDragging = true;
+                    m_attPressPos = me->pos();
+                    m_attDragBase = m_hasAttData ? m_lastAttQuat :
+                                   (m_modelTransform ? m_modelTransform->rotation() : QQuaternion());
+                }
+            }
+        } else if (event->type() == QEvent::MouseMove) {
+            if (m_attDragging && (static_cast<QMouseEvent*>(event)->buttons() & Qt::RightButton)) {
+                QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                const QPoint delta = me->pos() - m_attPressPos;
+                const float sens = 0.3f;
+                const float dRoll = -delta.y() * sens; // 绕X
+                const float dYaw = delta.x() * sens;   // 绕Z
+                if (m_modelTransform) {
+                    QQuaternion inc = QQuaternion::fromEulerAngles(dRoll, 0.0f, dYaw);
+                    QQuaternion updated = inc * m_attDragBase;
+                    m_modelTransform->setRotation(updated);
+                    setAttitudeLabelFromQuat(updated);
+                }
+            }
+        } else if (event->type() == QEvent::MouseButtonRelease) {
+            if (QMouseEvent* me = static_cast<QMouseEvent*>(event)) {
+                if (me->button() == Qt::RightButton) {
+                    m_attViewPaused = false;
+                    m_attDragging = false;
+                    // 松开后：若已有匹配到的姿态数据，恢复到最新匹配；否则保留用户拖动结果
+                    if (m_hasAttData) {
+                        if (m_modelTransform) {
+                            m_modelTransform->setRotation(m_lastAttQuat);
+                        }
+                        setAttitudeLabel(m_lastAttRoll, m_lastAttPitch, m_lastAttYaw);
+                        if (m_3dWindow) {
+                            if (auto cam = m_3dWindow->camera()) {
+                                cam->setPosition(QVector3D(0.0f, 0.0f, 10.0f));
+                                cam->setViewCenter(QVector3D(0, 0, 0));
+                                cam->setUpVector(QVector3D(0, 1, 0));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     if (isWave) {
         if (event->type() == QEvent::MouseButtonPress) {
             QMouseEvent *me = static_cast<QMouseEvent*>(event);
@@ -779,6 +821,30 @@ QString MainWindow::decodeTextSmart(const QByteArray &data) const
     // Streamed UTF-8 decoder to handle split packets without回退到本地编码
     QString out = m_utf8Decoder.decode(data);
     return out;
+}
+
+void MainWindow::setAttitudeLabelFromQuat(const QQuaternion &q)
+{
+    if (!m_attLabel) return;
+    // Qt 返回 (pitch=绕X, yaw=绕Y, roll=绕Z)
+    const QVector3D euler = q.toEulerAngles();
+    const double rollDeg = euler.x();
+    const double pitchDeg = euler.y();
+    const double yawDeg = euler.z();
+    setAttitudeLabel(rollDeg, pitchDeg, yawDeg);
+}
+
+void MainWindow::setAttitudeLabel(double rollDeg, double pitchDeg, double yawDeg)
+{
+    if (!m_attLabel) return;
+    QString text = QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
+                       .arg(QString::number(rollDeg, 'f', 1))
+                       .arg(QString::number(pitchDeg, 'f', 1))
+                       .arg(QString::number(yawDeg, 'f', 1));
+    if (text != m_lastAttText) {
+        m_lastAttText = text;
+        m_attLabel->setText(text);
+    }
 }
 
 bool MainWindow::tryParseWaveValues(const QString &text, QVector<double> &values) const
@@ -984,7 +1050,7 @@ void MainWindow::openFormatDialog()
     v->addWidget(attEnable);
 
     QLineEdit* attEdit = new QLineEdit(&dlg);
-    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：([-+]?\\\\d+(?:\\\\.\\\\d+)?)[,\\\\s]+([-+]?\\\\d+(?:\\\\.\\\\d+)?)[,\\\\s]+([-+]?\\\\d+(?:\\\\.\\\\d+)?)"));
+    attEdit->setPlaceholderText(QString::fromUtf8(u8"例：Roll: 0   Pitch: 0   Yaw: 0"));
     attEdit->setText(m_attRegex);
     v->addWidget(attEdit);
 
@@ -1034,6 +1100,9 @@ void MainWindow::openFormatDialog()
         for (QString &s : m_customRegexList) s = s.trimmed();
         m_customRegexEnableSpec = customEnableEdit->text().trimmed();
         updateCustomMatchDisplay(QString());
+        if (!m_useAttRegex) {
+            m_hasAttData = false;
+        }
     }
 }
 void MainWindow::setupWaveformTab()
@@ -1155,65 +1224,96 @@ void MainWindow::setup3DTab()
     }
 
     m_3dWindow = new Qt3DExtras::Qt3DWindow;
-    m_3dWindow->defaultFrameGraph()->setClearColor(QColor(30, 30, 35));
+    m_3dWindow->defaultFrameGraph()->setClearColor(QColor(24, 28, 32));
     m_3dRoot = new Qt3DCore::QEntity;
 
     auto cam = m_3dWindow->camera();
     cam->lens()->setPerspectiveProjection(45.0f, 16.0f/9.0f, 0.1f, 1000.0f);
-    cam->setPosition(QVector3D(0.0f, 0.0f, 12.0f));
+    cam->setPosition(QVector3D(0.0f, 0.0f, 10.0f));
     cam->setViewCenter(QVector3D(0, 0, 0));
 
+    // 允许鼠标绕原点旋转观察（锁定平移/缩放）
     auto camController = new Qt3DExtras::QOrbitCameraController(m_3dRoot);
     camController->setCamera(cam);
-    camController->setLinearSpeed(50.0f);
-    camController->setLookSpeed(180.0f);
+    camController->setLinearSpeed(0.0f); // 禁止平移
+    camController->setLookSpeed(90.0f);
 
-    // Simple airplane-like model
+    // Brighter directional light
+    {
+        auto lightEntity = new Qt3DCore::QEntity(m_3dRoot);
+        auto dirLight = new Qt3DRender::QDirectionalLight(lightEntity);
+        dirLight->setColor(QColor(255, 255, 255));
+        dirLight->setIntensity(1.5f);
+        dirLight->setWorldDirection(QVector3D(-0.3f, -0.5f, -1.0f));
+        lightEntity->addComponent(dirLight);
+    }
+
+    // 立方体主体
     m_modelEntity = new Qt3DCore::QEntity(m_3dRoot);
-    auto bodyMesh = new Qt3DExtras::QCuboidMesh;
-    bodyMesh->setXExtent(1.0f);
-    bodyMesh->setYExtent(0.3f);
-    bodyMesh->setZExtent(3.0f);
-    auto bodyMaterial = new Qt3DExtras::QPhongMaterial;
-    bodyMaterial->setDiffuse(QColor(80, 180, 255));
     m_modelTransform = new Qt3DCore::QTransform;
     m_modelTransform->setRotation(QQuaternion::fromEulerAngles(0, 0, 0));
-    m_modelEntity->addComponent(bodyMesh);
-    m_modelEntity->addComponent(bodyMaterial);
+    m_modelTransform->setTranslation(QVector3D(0, 0, 0));
     m_modelEntity->addComponent(m_modelTransform);
 
-    auto wingEntity = new Qt3DCore::QEntity(m_modelEntity);
-    auto wingMesh = new Qt3DExtras::QCuboidMesh;
-    wingMesh->setXExtent(4.0f);
-    wingMesh->setYExtent(0.1f);
-    wingMesh->setZExtent(0.5f);
-    auto wingTransform = new Qt3DCore::QTransform;
-    wingTransform->setTranslation(QVector3D(0, 0, 0));
-    wingEntity->addComponent(wingMesh);
-    wingEntity->addComponent(wingTransform);
-    wingEntity->addComponent(bodyMaterial);
+    const float half = 1.0f;
+    auto baseCube = new Qt3DCore::QEntity(m_modelEntity);
+    auto baseMesh = new Qt3DExtras::QCuboidMesh;
+    baseMesh->setXExtent(half * 2.0f);
+    baseMesh->setYExtent(half * 2.0f);
+    baseMesh->setZExtent(half * 2.0f);
+    auto baseMat = new Qt3DExtras::QPhongMaterial;
+    baseMat->setDiffuse(QColor(90, 105, 130));   // darker body for contrast
+    baseMat->setAmbient(QColor(70, 80, 100));
+    baseMat->setSpecular(QColor(180, 180, 190));
+    baseMat->setShininess(80.0f);
+    baseCube->addComponent(baseMesh);
+    baseCube->addComponent(baseMat);
 
-    auto tailEntity = new Qt3DCore::QEntity(m_modelEntity);
-    auto tailMesh = new Qt3DExtras::QCuboidMesh;
-    tailMesh->setXExtent(1.0f);
-    tailMesh->setYExtent(0.1f);
-    tailMesh->setZExtent(0.8f);
-    auto tailTransform = new Qt3DCore::QTransform;
-    tailTransform->setTranslation(QVector3D(0, 0.2f, -1.5f));
-    tailEntity->addComponent(tailMesh);
-    tailEntity->addComponent(tailTransform);
-    tailEntity->addComponent(bodyMaterial);
+    // XYZ 参考轴（红绿蓝）
+    auto addAxis = [&](const QVector3D &dir, const QColor &color) {
+        // 默认圆柱/圆锥轴沿 +Y，显式旋转到目标方向
+        // 圆柱长度等于立方体边长：从中心到另一侧面外
+        const float shaftLen = half * 2.0f;   // 立方体边长
+        const float shaftRadius = 0.06f;
+        const float headLen = 0.35f;
+        const float headRadius = 0.12f;
+        QQuaternion rot = QQuaternion::rotationTo(QVector3D(0, 1, 0), dir.normalized());
 
-    auto vtailEntity = new Qt3DCore::QEntity(m_modelEntity);
-    auto vtailMesh = new Qt3DExtras::QCuboidMesh;
-    vtailMesh->setXExtent(0.2f);
-    vtailMesh->setYExtent(0.8f);
-    vtailMesh->setZExtent(0.2f);
-    auto vtailTransform = new Qt3DCore::QTransform;
-    vtailTransform->setTranslation(QVector3D(0, 0.5f, -1.5f));
-    vtailEntity->addComponent(vtailMesh);
-    vtailEntity->addComponent(vtailTransform);
-    vtailEntity->addComponent(bodyMaterial);
+        auto shaft = new Qt3DCore::QEntity(m_modelEntity);
+        auto shaftMesh = new Qt3DExtras::QCylinderMesh;
+        shaftMesh->setRadius(shaftRadius);
+        shaftMesh->setLength(shaftLen);
+        auto shaftMat = new Qt3DExtras::QPhongMaterial;
+        shaftMat->setDiffuse(color);
+        shaftMat->setAmbient(color.darker(120));
+        auto shaftTx = new Qt3DCore::QTransform;
+        shaftTx->setRotation(rot);
+        shaftTx->setTranslation(dir.normalized() * (shaftLen * 0.5f));
+        shaft->addComponent(shaftMesh);
+        shaft->addComponent(shaftMat);
+        shaft->addComponent(shaftTx);
+
+        auto head = new Qt3DCore::QEntity(m_modelEntity);
+        auto headMesh = new Qt3DExtras::QConeMesh;
+        headMesh->setLength(headLen);
+        headMesh->setTopRadius(0.0f);
+        headMesh->setBottomRadius(headRadius);
+        auto headMat = new Qt3DExtras::QPhongMaterial;
+        headMat->setDiffuse(color);
+        headMat->setAmbient(color.darker(120));
+        auto headTx = new Qt3DCore::QTransform;
+        headTx->setRotation(rot);
+        // 箭头从圆柱末端再往外延伸半个边长
+        headTx->setTranslation(dir.normalized() * (shaftLen + headLen * 0.5f));
+        head->addComponent(headMesh);
+        head->addComponent(headMat);
+        head->addComponent(headTx);
+    };
+    addAxis(QVector3D(1, 0, 0), QColor(220, 70, 70));   // X
+    addAxis(QVector3D(0, 1, 0), QColor(70, 200, 70));   // Y
+    addAxis(QVector3D(0, 0, 1), QColor(70, 140, 220));  // Z
+
+    m_3dWindow->setRootEntity(m_3dRoot);
 
     m_3dWindow->setRootEntity(m_3dRoot);
 
@@ -1225,6 +1325,8 @@ void MainWindow::setup3DTab()
 
     m_3dContainer = QWidget::createWindowContainer(m_3dWindow, m_tab3d);
     m_3dContainer->setFocusPolicy(Qt::StrongFocus);
+    m_3dContainer->installEventFilter(this);
+    m_3dWindow->installEventFilter(this);
 
     layout->addWidget(m_attLabel, 0);
     layout->addWidget(m_3dContainer, 1);
@@ -1232,19 +1334,26 @@ void MainWindow::setup3DTab()
 
 void MainWindow::updateAttitude(double rollDeg, double pitchDeg, double yawDeg)
 {
+    if (!m_useAttRegex) return; // 正则关闭时忽略后续姿态更新
     if (!m_modelTransform) return;
-    QQuaternion q = QQuaternion::fromEulerAngles(pitchDeg, yawDeg, rollDeg);
-    m_modelTransform->setRotation(q);
-    if (m_attLabel) {
-        m_attLabel->setText(QStringLiteral("Roll: %1   Pitch: %2   Yaw: %3")
-                                .arg(QString::number(rollDeg, 'f', 1))
-                                .arg(QString::number(pitchDeg, 'f', 1))
-                                .arg(QString::number(yawDeg, 'f', 1)));
+    // Qt 定义：fromEulerAngles(pitch=绕X, yaw=绕Y, roll=绕Z)
+    // 用户语义：roll=绕X, pitch=绕Y, yaw=绕Z => 直接按 (roll, pitch, yaw) 映射到 (pitch, yaw, roll)
+    QQuaternion q = QQuaternion::fromEulerAngles(rollDeg, pitchDeg, yawDeg);
+    m_lastAttQuat = q;
+    m_lastAttRoll = rollDeg;
+    m_lastAttPitch = pitchDeg;
+    m_lastAttYaw = yawDeg;
+    m_hasAttData = true;
+    ++m_attUpdateSeq;
+    if (!m_attViewPaused) {
+        m_modelTransform->setRotation(q);
+        setAttitudeLabel(rollDeg, pitchDeg, yawDeg);
     }
 }
 
 bool MainWindow::tryParseAttitude(const QString &text, double &roll, double &pitch, double &yaw) const
 {
+    if (!m_useAttRegex) return false;
     QString str = text.trimmed();
     if (m_useAttRegex && !m_attRegex.isEmpty()) {
         QRegularExpression re(m_attRegex);

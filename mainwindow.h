@@ -19,6 +19,7 @@
 #include <QToolButton>
 #include <QShortcut>
 #include <QStringDecoder>
+#include <QPoint>
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QPhongMaterial>
@@ -119,6 +120,18 @@ private:
     QToolButton* m_recvSearchNext = nullptr;
     QToolButton* m_recvSearchPrev = nullptr;
     mutable QStringDecoder m_utf8Decoder{QStringDecoder::Utf8};
+    QString m_lastAttText;
+    QQuaternion m_lastAttQuat{QQuaternion::fromEulerAngles(0, 0, 0)};
+    bool m_attViewPaused = false;
+    bool m_hasAttData = false;
+    bool m_attDragging = false;
+    QPoint m_attPressPos;
+    QQuaternion m_attDragBase;
+    double m_lastAttRoll = 0.0;
+    double m_lastAttPitch = 0.0;
+    double m_lastAttYaw = 0.0;
+    int m_attUpdateSeq = 0;
+    int m_attPauseSeq = 0;
 
     SerialSettings getCurrentSerialSettings() const;
     void writeData(const QByteArray &data);
@@ -136,6 +149,8 @@ private:
     void updateWaveformValues(const QVector<double>& values);
     void setup3DTab();
     void updateAttitude(double rollDeg, double pitchDeg, double yawDeg);
+    void setAttitudeLabelFromQuat(const QQuaternion& q);
+    void setAttitudeLabel(double rollDeg, double pitchDeg, double yawDeg);
     bool tryParseAttitude(const QString& text, double &roll, double &pitch, double &yaw) const;
     bool tryParseWaveValues(const QString &text, QVector<double> &values) const;
     void updateCustomMatchDisplay(const QString &text);
