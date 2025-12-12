@@ -753,6 +753,26 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                     setAttitudeLabelFromQuat(updated);
                 }
             }
+        } else if (event->type() == QEvent::MouseButtonDblClick) {
+            // 双击左键：手动归零模型姿态
+            m_attViewPaused = false;
+            m_attDragging = false;
+            QQuaternion ident = QQuaternion::fromEulerAngles(0, 0, 0);
+            if (m_modelTransform) {
+                m_modelTransform->setRotation(ident);
+            }
+            if (m_3dWindow) {
+                if (auto cam = m_3dWindow->camera()) {
+                    cam->setPosition(QVector3D(0.0f, 0.0f, 10.0f));
+                    cam->setViewCenter(QVector3D(0, 0, 0));
+                    cam->setUpVector(QVector3D(0, 1, 0));
+                }
+            }
+            m_lastAttQuat = ident;
+            m_lastAttRoll = m_lastAttPitch = m_lastAttYaw = 0.0;
+            m_hasAttData = false;
+            setAttitudeLabel(0.0, 0.0, 0.0);
+            return true;
         } else if (event->type() == QEvent::MouseButtonRelease) {
             if (QMouseEvent* me = static_cast<QMouseEvent*>(event)) {
                 if (me->button() == Qt::RightButton) {
