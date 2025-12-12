@@ -109,10 +109,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->openBt, &QPushButton::clicked, this, &MainWindow::on_openButton_clicked);
     connect(ui->sendBt, &QPushButton::clicked, this, &MainWindow::on_sendButton_clicked);
-    connect(ui->btnClearSend, &QPushButton::clicked, this, [this]() { ui->sendEdit->clear(); });
+    connect(ui->btnClearSend, &QPushButton::clicked, this, [this]() {
+        ui->sendEdit->clear();
+        m_txBytes = 0;
+        updateStatusLabels();
+    });
     connect(ui->clearBt, &QPushButton::clicked, this, [this]() {
         ui->recvEdit->clear();
         m_recvAutoFollow = true;
+        m_rxBytes = 0;
+        updateStatusLabels();
     });
     connect(ui->chkTimSend, &QCheckBox::toggled, this, [this](bool on) {
         m_autoSend = on;
