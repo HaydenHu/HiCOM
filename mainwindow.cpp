@@ -168,6 +168,60 @@ MainWindow::MainWindow(QWidget *parent)
             m_sendTimer->stop();
         }
     });
+    // 发送区 HEX 开关：切换时自动转换内容，校验 HEX 有效性
+    connect(ui->chk_send_hex, &QCheckBox::toggled, this, [this](bool on) {
+        const QString txt = ui->sendEdit->toPlainText();
+        const QString trimmed = txt.trimmed();
+        const QRegularExpression hexRe(QStringLiteral("^[0-9A-Fa-f\\s]+$"));
+
+        if (on) {
+            const bool looksLikeHex = !trimmed.isEmpty() && hexRe.match(trimmed).hasMatch();
+            if (looksLikeHex) {
+                QString cleaned = trimmed;
+                cleaned.remove(QRegularExpression(QStringLiteral("\\s")));
+                if (cleaned.size() % 2 != 0) {
+                    QSignalBlocker b(ui->chk_send_hex);
+                    ui->chk_send_hex->setChecked(false);
+                    QMessageBox::warning(this,
+                                         QString::fromUtf8(u8"HEX格式无效"),
+                                         QString::fromUtf8(u8"HEX字节数为奇数，请补全或调整后再开启。"));
+                    return;
+                }
+                bool ok = false;
+                QByteArray data = parseHexString(trimmed, &ok);
+                if (!ok || data.isEmpty()) {
+                    QSignalBlocker b(ui->chk_send_hex);
+                    ui->chk_send_hex->setChecked(false);
+                    QMessageBox::warning(this,
+                                         QString::fromUtf8(u8"HEX格式无效"),
+                                         QString::fromUtf8(u8"当前内容不是有效的HEX字符串，无法进入HEX模式。"));
+                    return;
+                }
+                QString normalized = QString::fromLatin1(data.toHex(' ').toUpper());
+                QSignalBlocker b(ui->sendEdit);
+                ui->sendEdit->setPlainText(normalized);
+                return;
+            }
+            // 非 HEX 文本：按 UTF-8 转为 HEX
+            QString hex = QString::fromLatin1(txt.toUtf8().toHex(' ').toUpper());
+            QSignalBlocker b(ui->sendEdit);
+            ui->sendEdit->setPlainText(hex);
+        } else {
+            bool ok = false;
+            QByteArray data = parseHexString(trimmed, &ok);
+            if (!ok) {
+                QSignalBlocker b(ui->chk_send_hex);
+                ui->chk_send_hex->setChecked(true);
+                QMessageBox::warning(this,
+                                     QString::fromUtf8(u8"HEX格式无效"),
+                                     QString::fromUtf8(u8"当前内容不是有效的HEX字符串，无法退出HEX模式。"));
+                return;
+            }
+            QString plain = QString::fromUtf8(data);
+            QSignalBlocker b(ui->sendEdit);
+            ui->sendEdit->setPlainText(plain);
+        }
+    });
     // ANSI 颜色开关
     m_enableAnsiColors = ui->chk_rev_ansi->isChecked();
     connect(ui->chk_rev_ansi, &QCheckBox::toggled, this, [this](bool on) {
