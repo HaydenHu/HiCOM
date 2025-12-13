@@ -106,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_recvSearchNext = new QToolButton(m_recvSearchPanel);
         m_recvSearchNext->setText(QStringLiteral("▼"));
         m_recvSearchClose = new QToolButton(m_recvSearchPanel);
-        m_recvSearchClose->setText(QStringLiteral("?"));
+        m_recvSearchClose->setText(QStringLiteral("✕"));
         h->addWidget(lbl);
         h->addWidget(m_recvSearchEdit, 1);
         h->addWidget(m_recvSearchPrev);
@@ -257,7 +257,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 右上角格式按钮，打开设置弹窗
     m_formatBtn = new QToolButton(this);
-    m_formatBtn->setText(QString::fromUtf8(u8"?"));
+    m_formatBtn->setText(QString::fromUtf8(u8"⚙"));
     m_formatBtn->setToolTip(QString::fromUtf8(u8"格式设置"));
     m_formatBtn->setAutoRaise(true);
     m_formatBtn->setFixedSize(24, 24);
@@ -1559,7 +1559,6 @@ bool MainWindow::tryParseAttitude(const QString &text, double &roll, double &pit
     yaw = y;
     return true;
 }
-
 
 
 
