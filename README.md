@@ -29,6 +29,9 @@
 ## ANSI颜色解析，可以识别单片机输出日志中的文字颜色信息，便于按颜色等级区分日志，一目了然。
 
 \x1b[31m这是红色\x1b[0m 普通文字
+
 \x1b[32m这是绿色\x1b[0m 普通文字
 
 <img width="811" height="681" alt="image" src="https://github.com/user-attachments/assets/70693b24-4f7c-4076-8794-fb37432731ed" />
+
+## CTRL+滚轮可以缩放发送接收文字大小，方便大龄工程师🤪。
