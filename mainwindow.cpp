@@ -166,6 +166,11 @@ MainWindow::MainWindow(QWidget *parent)
             m_sendTimer->stop();
         }
     });
+    // ANSI 颜色开关
+    m_enableAnsiColors = ui->chk_rev_ansi->isChecked();
+    connect(ui->chk_rev_ansi, &QCheckBox::toggled, this, [this](bool on) {
+        m_enableAnsiColors = on;
+    });
     connect(ui->txtSendMs, qOverload<int>(&QSpinBox::valueChanged), this, [this](int v) {
         if (m_autoSend) {
             m_sendTimer->setInterval(v);
@@ -419,7 +424,7 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     if (ui->chk_rev_hex->isChecked()) {
         line += formatAsHex(packet).toHtmlEscaped();
     } else {
-        QString htmlBody = decoded.toHtmlEscaped();
+        QString htmlBody = m_enableAnsiColors ? ansiToHtml(decoded) : decoded.toHtmlEscaped();
         htmlBody.replace(QStringLiteral("\r\n"), QStringLiteral("<br/>"));
         htmlBody.replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
         line += htmlBody;
@@ -1047,6 +1052,117 @@ void MainWindow::findInRecv(bool backward)
         m_recvAutoFollow = false;
     }
     updateRecvSearchHighlights();
+}
+
+QString MainWindow::cssColorForCode(int code) const
+{
+    switch (code) {
+    case 30: return QStringLiteral("#000000");
+    case 31: return QStringLiteral("#c62828");
+    case 32: return QStringLiteral("#2e7d32");
+    case 33: return QStringLiteral("#f9a825");
+    case 34: return QStringLiteral("#1565c0");
+    case 35: return QStringLiteral("#8e24aa");
+    case 36: return QStringLiteral("#00838f");
+    case 37: return QStringLiteral("#e0e0e0");
+    case 90: return QStringLiteral("#555555");
+    case 91: return QStringLiteral("#ef5350");
+    case 92: return QStringLiteral("#66bb6a");
+    case 93: return QStringLiteral("#ffca28");
+    case 94: return QStringLiteral("#42a5f5");
+    case 95: return QStringLiteral("#ab47bc");
+    case 96: return QStringLiteral("#26c6da");
+    case 97: return QStringLiteral("#ffffff");
+    default: return QString();
+    }
+}
+
+QString MainWindow::normalizeAnsiEscapes(const QString &text) const
+{
+    // 将可见的转义序列如 "\x1b" 或 "\033" 转成真正的 ESC
+    QString normalized = text;
+    normalized.replace(QStringLiteral("\\x1b"), QString(QChar(0x1b)), Qt::CaseInsensitive);
+    normalized.replace(QStringLiteral("\\033"), QString(QChar(0x1b)), Qt::CaseInsensitive);
+    normalized.replace(QStringLiteral("\\e"), QString(QChar(0x1b)), Qt::CaseInsensitive);
+    return normalized;
+}
+
+QString MainWindow::ansiToHtml(const QString &text) const
+{
+    QString src = normalizeAnsiEscapes(text);
+    QString out;
+    QString currentFg;
+    QString currentBg;
+    bool bold = false;
+
+    auto flushSpan = [&](const QString& segment) {
+        if (segment.isEmpty()) return;
+        QString escaped = segment.toHtmlEscaped();
+        if (!currentFg.isEmpty() || !currentBg.isEmpty() || bold) {
+            QString style;
+            if (!currentFg.isEmpty()) style += QStringLiteral("color:%1;").arg(currentFg);
+            if (!currentBg.isEmpty()) style += QStringLiteral("background-color:%1;").arg(currentBg);
+            if (bold) style += QStringLiteral("font-weight:bold;");
+            out += QStringLiteral("<span style=\"%1\">%2</span>").arg(style, escaped);
+        } else {
+            out += escaped;
+        }
+    };
+
+    QString buffer;
+    for (int i = 0; i < src.size(); ++i) {
+        QChar ch = src.at(i);
+        if (ch != QChar(0x1b)) {
+            buffer.append(ch);
+            continue;
+        }
+        // Flush pending text
+        flushSpan(buffer);
+        buffer.clear();
+
+        // Expect '['
+        if (i + 1 >= src.size() || src.at(i + 1) != QChar('[')) {
+            continue;
+        }
+        i += 2;
+        QString numStr;
+        while (i < src.size()) {
+            QChar c = src.at(i);
+            if (c.isDigit() || c == QChar(';')) {
+                numStr.append(c);
+                ++i;
+                continue;
+            }
+            if (c == QChar('m')) {
+                QStringList parts = numStr.split(';', Qt::KeepEmptyParts);
+                if (parts.isEmpty()) parts << "0";
+                for (const QString& p : parts) {
+                    bool ok = false;
+                    int code = p.toInt(&ok);
+                    if (!ok) continue;
+                    if (code == 0) { // reset
+                        currentFg.clear();
+                        currentBg.clear();
+                        bold = false;
+                    } else if (code == 1) { // bold
+                        bold = true;
+                    } else if ((code >= 30 && code <= 37) || (code >= 90 && code <= 97)) {
+                        QString cval = cssColorForCode(code);
+                        if (!cval.isEmpty()) currentFg = cval;
+                    } else if ((code >= 40 && code <= 47) || (code >= 100 && code <= 107)) {
+                        int fgCode = (code >= 100) ? (code - 60) : code - 10;
+                        QString cval = cssColorForCode(fgCode);
+                        if (!cval.isEmpty()) currentBg = cval;
+                    }
+                }
+                break;
+            }
+            // unsupported sequence, stop
+            break;
+        }
+    }
+    flushSpan(buffer);
+    return out;
 }
 
 void MainWindow::openFormatDialog()

@@ -160,5 +160,9 @@ private:
     void hideRecvSearch();
     void updateRecvSearchHighlights();
     void findInRecv(bool backward);
+    QString ansiToHtml(const QString& text) const;
+    QString cssColorForCode(int code) const;
+    bool m_enableAnsiColors = false;
+    QString normalizeAnsiEscapes(const QString& text) const;
 };
 #endif // MAINWINDOW_H
