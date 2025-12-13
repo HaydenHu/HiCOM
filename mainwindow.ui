@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>809</width>
-    <height>625</height>
+    <height>649</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -194,12 +194,15 @@
                </item>
                <item>
                 <widget class="QComboBox" name="checkbitCb">
+                 <property name="currentText">
+                  <string>None</string>
+                 </property>
                  <property name="currentIndex">
                   <number>0</number>
                  </property>
                  <item>
                   <property name="text">
-                   <string>none</string>
+                   <string>None</string>
                   </property>
                  </item>
                  <item>
@@ -210,6 +213,39 @@
                  <item>
                   <property name="text">
                    <string>偶校验</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_flow">
+               <item>
+                <widget class="QLabel" name="label_flow">
+                 <property name="text">
+                  <string>流控</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="flowCtrlCb">
+                 <property name="currentIndex">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>None</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>RTS/CTS</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>XON/XOFF</string>
                   </property>
                  </item>
                 </widget>

@@ -56,7 +56,7 @@ void SerialPortWorker::startPort(const SerialSettings &settings) {
     m_serial->setDataBits(settings.dataBits);
     m_serial->setParity(settings.parity);
     m_serial->setStopBits(settings.stopBits);
-    m_serial->setFlowControl(QSerialPort::NoFlowControl);
+    m_serial->setFlowControl(settings.flowControl);
     m_serial->setReadBufferSize(1024 * 1024);
 
     if (!m_serial->open(QIODevice::ReadWrite)) {
@@ -101,6 +101,7 @@ void SerialPortWorker::restartPort() {
             settings.dataBits = m_serial->dataBits();
             settings.parity = m_serial->parity();
             settings.stopBits = m_serial->stopBits();
+            settings.flowControl = m_serial->flowControl();
             m_lastSettings = settings;
             m_hasSettings = true;
         } else {

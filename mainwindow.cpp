@@ -251,8 +251,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnSerialCheck, &QPushButton::clicked, this, [this]() { saveLogs(); });
 
     // 默认正则
-    m_waveRegexList = {QStringLiteral("(-?\\d+(?:\\.\\d+)?)")};
-    m_attRegex = QStringLiteral("Roll:\\s*([-+]?\\d+(?:\\.\\d+)?)\\s+Pitch:\\s*([-+]?\\d+(?:\\.\\d+)?)\\s+Yaw:\\s*([-+]?\\d+(?:\\.\\d+)?)");
+    m_waveRegexList = {QString::fromUtf8(u8"(-?\\d+(?:\\.\\d+)?)")};
+    m_attRegex = QString::fromUtf8(u8"Roll:\\s*([-+]?\\d+(?:\\.\\d+)?)\\s+Pitch:\\s*([-+]?\\d+(?:\\.\\d+)?)\\s+Yaw:\\s*([-+]?\\d+(?:\\.\\d+)?)");
     m_customRegexEnableSpec = QStringLiteral("0");
 
     // 右上角格式按钮，打开设置弹窗
@@ -347,6 +347,13 @@ SerialSettings MainWindow::getCurrentSerialSettings() const
     case 2: settings.stopBits = QSerialPort::TwoStop; break;
     default: settings.stopBits = QSerialPort::OneStop; break;
     }
+
+    // 流控
+    switch (ui->flowCtrlCb->currentIndex()) {
+    case 1: settings.flowControl = QSerialPort::HardwareControl; break;
+    case 2: settings.flowControl = QSerialPort::SoftwareControl; break;
+    default: settings.flowControl = QSerialPort::NoFlowControl; break;
+    }
     return settings;
 }
 
@@ -392,13 +399,11 @@ void MainWindow::processWriteQueue()
 void MainWindow::onPacketReceived(const QByteArray &packet)
 {
     QVector<double> waveValues;
-    bool waveParsed = false;
     const QString decoded = decodeTextSmart(packet);
     const QString raw = decoded.trimmed();
     if (m_useWaveRegex) {
         if (tryParseWaveValues(raw, waveValues) && !waveValues.isEmpty()) {
             updateWaveformValues(waveValues);
-            waveParsed = true;
         }
     }
     // 当未启用波形正则或未能成功解析时，不再按字节值灌入波形，避免显示三角波
@@ -545,6 +550,7 @@ void MainWindow::onPortOpened()
     ui->databitCb->setEnabled(false);
     ui->checkbitCb->setEnabled(false);
     ui->stopbitCb->setEnabled(false);
+    if (ui->flowCtrlCb) ui->flowCtrlCb->setEnabled(false);
     m_rxBytes = 0;
     m_txBytes = 0;
     updateStatusLabels();
@@ -568,6 +574,7 @@ void MainWindow::onPortClosed()
     ui->databitCb->setEnabled(true);
     ui->checkbitCb->setEnabled(true);
     ui->stopbitCb->setEnabled(true);
+    if (ui->flowCtrlCb) ui->flowCtrlCb->setEnabled(true);
     m_hasCurrentSettings = false;
     {
         QMutexLocker locker(&m_queueMutex);
@@ -1260,8 +1267,8 @@ void MainWindow::openFormatDialog()
     connect(resetBtn, &QPushButton::clicked, [&]() {
         waveEnable->setChecked(false);
         attEnable->setChecked(false);
-        waveEdit->setPlainText(QStringLiteral("(-?\d+(?:\.\d+)?)"));
-        attEdit->setText(QStringLiteral("([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)[,\s]+([-+]?\d+(?:\.\d+)?)"));
+        waveEdit->setPlainText(QString::fromUtf8(u8"(-?\\d+(?:\\.\\d+)?)"));
+        attEdit->setText(QString::fromUtf8(u8"([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)[,\\s]+([-+]?\\d+(?:\\.\\d+)?)"));
         customEdit->clear();
         customEnableEdit->setText(QStringLiteral("0"));
     });
@@ -1559,9 +1566,3 @@ bool MainWindow::tryParseAttitude(const QString &text, double &roll, double &pit
     yaw = y;
     return true;
 }
-
-
-
-
-
-

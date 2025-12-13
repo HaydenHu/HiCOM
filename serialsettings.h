@@ -10,6 +10,7 @@ struct SerialSettings {
     QSerialPort::DataBits dataBits;
     QSerialPort::Parity parity;
     QSerialPort::StopBits stopBits;
+    QSerialPort::FlowControl flowControl = QSerialPort::NoFlowControl;
 };
 
 #endif // SERIALSETTINGS_H
