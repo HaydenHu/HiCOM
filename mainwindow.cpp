@@ -106,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_recvSearchNext = new QToolButton(m_recvSearchPanel);
         m_recvSearchNext->setText(QStringLiteral("▼"));
         m_recvSearchClose = new QToolButton(m_recvSearchPanel);
-        m_recvSearchClose->setText(QStringLiteral("✕"));
+        m_recvSearchClose->setText(QStringLiteral("?"));
         h->addWidget(lbl);
         h->addWidget(m_recvSearchEdit, 1);
         h->addWidget(m_recvSearchPrev);
@@ -147,6 +147,8 @@ MainWindow::MainWindow(QWidget *parent)
         updateStatusLabels();
         m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
         m_hasAttData = false;
+        m_recvLineBuffer.clear();
+        m_lastRecvFlushMs = 0;
     });
     // 搜索栏与快捷键
     QShortcut* findShortcut = new QShortcut(QKeySequence::Find, ui->recvEdit);
@@ -255,7 +257,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 右上角格式按钮，打开设置弹窗
     m_formatBtn = new QToolButton(this);
-    m_formatBtn->setText(QString::fromUtf8(u8"⚙"));
+    m_formatBtn->setText(QString::fromUtf8(u8"?"));
     m_formatBtn->setToolTip(QString::fromUtf8(u8"格式设置"));
     m_formatBtn->setAutoRaise(true);
     m_formatBtn->setFixedSize(24, 24);
@@ -414,23 +416,53 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     updateStatusLabels();
     updateCustomMatchDisplay(raw);
 
-    QString line;
-    if (ui->chk_rev_time->isChecked()) {
-        const QString ts = QDateTime::currentDateTime().toString(QStringLiteral("[HH:mm:ss.zzz] "));
-        m_toggleTimestampColor = !m_toggleTimestampColor;
-        const QString color = m_toggleTimestampColor ? QStringLiteral("#007aff") : QStringLiteral("#ff6a00");
-        line += QStringLiteral("<span style=\"color:%1;\">%2</span> ").arg(color, ts.toHtmlEscaped());
-    }
-    if (ui->chk_rev_hex->isChecked()) {
-        line += formatAsHex(packet).toHtmlEscaped();
-    } else {
-        QString htmlBody = m_enableAnsiColors ? ansiToHtml(decoded) : decoded.toHtmlEscaped();
-        htmlBody.replace(QStringLiteral("\r\n"), QStringLiteral("<br/>"));
-        htmlBody.replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
+    const qint64 nowMs = QDateTime::currentDateTime().toMSecsSinceEpoch();
+    QStringList linesToAppend;
+    auto appendLine = [this, &linesToAppend](const QString& seg, bool addBreak) {
+        QString line;
+        if (ui->chk_rev_time->isChecked()) {
+            const QString ts = QDateTime::currentDateTime().toString(QStringLiteral("[HH:mm:ss.zzz] "));
+            m_toggleTimestampColor = !m_toggleTimestampColor;
+            const QString color = m_toggleTimestampColor ? QStringLiteral("#007aff") : QStringLiteral("#ff6a00");
+            line += QStringLiteral("<span style=\"color:%1;\">%2</span> ").arg(color, ts.toHtmlEscaped());
+        }
+        QString htmlBody = m_enableAnsiColors ? ansiToHtml(seg) : seg.toHtmlEscaped();
         line += htmlBody;
-    }
-    if (ui->chk_rev_line->isChecked()) {
-        line += QStringLiteral("<br/>");
+        if (addBreak && ui->chk_rev_line->isChecked()) line += QStringLiteral("<br/>");
+        linesToAppend << line;
+    };
+
+    if (ui->chk_rev_hex->isChecked()) {
+        appendLine(formatAsHex(packet), ui->chk_rev_line->isChecked());
+    } else {
+        if (!ui->chk_rev_line->isChecked()) {
+            // 未勾选自动换行：每包直接输出，不额外换行
+            appendLine(decoded, false);
+        } else {
+            // 勾选自动换行：仅按换行符换行，超时才按当前缓冲输出
+            QString combined = m_recvLineBuffer + decoded;
+            int startIdx = 0;
+            bool hasEol = false;
+            for (int i = 0; i < combined.size(); ++i) {
+                const QChar c = combined.at(i);
+                if (c == QChar('\r') || c == QChar('\n')) {
+                    hasEol = true;
+                    const bool crlf = (c == QChar('\r') && i + 1 < combined.size() && combined.at(i + 1) == QChar('\n'));
+                    QString seg = combined.mid(startIdx, i - startIdx);
+                    appendLine(seg, true);
+                    if (crlf) ++i;
+                    startIdx = i + 1;
+                }
+            }
+            m_recvLineBuffer = combined.mid(startIdx);
+
+            // 无换行时不立即输出，等待后续；但若超时则按当前缓冲输出一行
+            const qint64 gap = (m_lastRecvFlushMs > 0) ? (nowMs - m_lastRecvFlushMs) : std::numeric_limits<qint64>::max();
+            if (!hasEol && !m_recvLineBuffer.isEmpty() && gap > 300) {
+                appendLine(m_recvLineBuffer, true);
+                m_recvLineBuffer.clear();
+            }
+        }
     }
 
     QScrollBar* vs = ui->recvEdit->verticalScrollBar();
@@ -438,8 +470,13 @@ void MainWindow::onPacketReceived(const QByteArray &packet)
     if (vs && !m_recvAutoFollow) restorePos = vs->value();
 
     m_inRecvAppend = true;
-    ui->recvEdit->append(line);
+    for (const QString& l : linesToAppend) {
+        ui->recvEdit->append(l);
+    }
     m_inRecvAppend = false;
+    if (!linesToAppend.isEmpty()) {
+        m_lastRecvFlushMs = nowMs;
+    }
 
     if (m_recvAutoFollow) {
         QTextCursor c = ui->recvEdit->textCursor();
@@ -479,8 +516,8 @@ void MainWindow::onFatalError(const QString &error)
     QMessageBox::critical(this, "Serial Port Fatal Error", error);
     ui->recvEdit->append(QStringLiteral("<span style=\"color:red;\">[FATAL] %1</span>")
                              .arg(error.toHtmlEscaped()));
-    m_isPortOpen = false;
-    ui->openBt->setText(QStringLiteral("Open Port"));
+    ui->openBt->setText(QString::fromUtf8(u8"打开串口"));
+
 }
 
 void MainWindow::onPortOpened()
@@ -490,6 +527,9 @@ void MainWindow::onPortOpened()
     m_inRecvAppend = false;
     m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
     m_hasAttData = false;
+    m_recvLineBuffer.clear();
+    m_lastRecvFlushMs = 0;
+
     m_lastAttText.clear();
     updateRecvSearchHighlights();
     if (QScrollBar* vs = ui->recvEdit->verticalScrollBar()) {
@@ -499,7 +539,7 @@ void MainWindow::onPortOpened()
     c.movePosition(QTextCursor::End);
     ui->recvEdit->setTextCursor(c);
     ui->recvEdit->ensureCursorVisible();
-    ui->openBt->setText(QStringLiteral("关闭串口"));
+    ui->openBt->setText(QString::fromUtf8(u8"关闭串口"));
     ui->serialCb->setEnabled(false);
     ui->baundrateCb->setEnabled(false);
     ui->databitCb->setEnabled(false);
@@ -518,9 +558,11 @@ void MainWindow::onPortClosed()
     m_inRecvAppend = false;
     m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
     m_hasAttData = false;
+    m_recvLineBuffer.clear();
+    m_lastRecvFlushMs = 0;
     m_lastAttText.clear();
     updateRecvSearchHighlights();
-    ui->openBt->setText(QStringLiteral("打开串口"));
+    ui->openBt->setText(QString::fromUtf8(u8"打开串口"));
     ui->serialCb->setEnabled(true);
     ui->baundrateCb->setEnabled(true);
     ui->databitCb->setEnabled(true);
@@ -1517,3 +1559,10 @@ bool MainWindow::tryParseAttitude(const QString &text, double &roll, double &pit
     yaw = y;
     return true;
 }
+
+
+
+
+
+
+

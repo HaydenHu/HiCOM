@@ -164,5 +164,7 @@ private:
     QString cssColorForCode(int code) const;
     bool m_enableAnsiColors = false;
     QString normalizeAnsiEscapes(const QString& text) const;
+    QString m_recvLineBuffer;
+    qint64 m_lastRecvFlushMs = 0;
 };
 #endif // MAINWINDOW_H
