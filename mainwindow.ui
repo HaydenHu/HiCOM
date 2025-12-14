@@ -299,6 +299,9 @@
              <string>接收设置</string>
             </property>
             <layout class="QGridLayout" name="gridLayout_recv">
+             <property name="spacing">
+              <number>10</number>
+             </property>
              <item row="0" column="0">
               <widget class="QPushButton" name="clearBt">
                <property name="sizePolicy">
@@ -376,7 +379,13 @@
             <property name="title">
              <string>发送设置</string>
             </property>
-            <layout class="QGridLayout" name="gridLayout_send">
+            <layout class="QGridLayout" name="gridLayout_send" rowstretch="1,1,1" rowminimumheight="1,1,1">
+             <property name="leftMargin">
+              <number>9</number>
+             </property>
+             <property name="spacing">
+              <number>10</number>
+             </property>
              <item row="0" column="0">
               <widget class="QPushButton" name="btnClearSend">
                <property name="sizePolicy">
@@ -405,8 +414,23 @@
              </item>
              <item row="1" column="0">
               <widget class="QSpinBox" name="txtSendMs">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>20</height>
+                </size>
+               </property>
                <property name="maximum">
                 <number>360000</number>
+               </property>
+               <property name="singleStep">
+                <number>100</number>
                </property>
                <property name="value">
                 <number>200</number>
@@ -448,7 +472,10 @@
            <widget class="QTextEdit" name="recvEdit"/>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_8">
+           <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="9,1">
+            <property name="spacing">
+             <number>10</number>
+            </property>
             <item>
              <widget class="QTextEdit" name="sendEdit"/>
             </item>
@@ -459,6 +486,12 @@
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>80</width>
+                <height>0</height>
+               </size>
               </property>
               <property name="baseSize">
                <size>
