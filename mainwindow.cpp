@@ -525,8 +525,90 @@ void MainWindow::applyTheme(bool dark)
         pal.setColor(QPalette::Mid, QColor(200, 200, 200)); // 边框阴影
     }
     qApp->setPalette(pal);
+    // 样式：文本框和按钮边框
+    QString style;
+    if (dark) {
+        style = QStringLiteral(
+            "QTextEdit, QPlainTextEdit {"
+            "  border: 1px solid #3c3c3c;"
+            "  border-radius: 4px;"
+            "}"
+            "QPushButton {"
+            "  border: 1px solid #5a5a5a;"
+            "  border-radius: 4px;"
+            "  padding: 4px 8px;"
+            "}"
+            "QPushButton:pressed {"
+            "  background: #3a3a3a;"
+            "}"
+        );
+    } else {
+        style = QStringLiteral(
+            "QTextEdit, QPlainTextEdit {"
+            "  border: 1px solid #9a9a9a;"
+            "  border-radius: 4px;"
+            "  background: #fbfbfb;"
+            "}"
+            "QPushButton {"
+            "  border: 1px solid #8a8a8a;"
+            "  border-radius: 4px;"
+            "  padding: 4px 8px;"
+            "}"
+            "QPushButton:pressed {"
+            "  background: #dcdcdc;"
+            "}"
+        );
+    }
+    qApp->setStyleSheet(style);
 
+    // 波形区主题同步
+    if (m_wavePlot) {
+        const QColor bg = dark ? QColor(24, 24, 24) : QColor(255, 255, 255);
+        const QColor axis = dark ? QColor(230, 230, 230) : QColor(30, 30, 30);
+        const QColor grid = dark ? QColor(80, 80, 80) : QColor(180, 180, 180);
+        m_wavePlot->setBackground(bg);
+        if (auto rect = m_wavePlot->axisRect()) rect->setBackground(bg);
+        auto applyAxis = [&](QCPAxis* ax) {
+            if (!ax) return;
+            ax->setBasePen(QPen(axis));
+            ax->setTickPen(QPen(axis));
+            ax->setSubTickPen(QPen(axis));
+            ax->setLabelColor(axis);
+            ax->setTickLabelColor(axis);
+            if (ax->grid()) {
+                ax->grid()->setPen(QPen(grid));
+                ax->grid()->setSubGridPen(QPen(grid.lighter()));
+            }
+        };
+        applyAxis(m_wavePlot->xAxis);
+        applyAxis(m_wavePlot->yAxis);
+        m_wavePlot->replot(QCustomPlot::rpQueuedReplot);
+    }
 
+    // 3D 区域背景与姿态标签
+    if (m_3dWindow) {
+        const QColor clear = dark ? QColor(24, 28, 32) : QColor(235, 235, 235);
+        m_3dWindow->defaultFrameGraph()->setClearColor(clear);
+    }
+    if (m_baseMat) {
+        if (dark) {
+            m_baseMat->setDiffuse(QColor(90, 105, 130));
+            m_baseMat->setAmbient(QColor(70, 80, 100));
+            m_baseMat->setSpecular(QColor(180, 180, 190));
+        } else {
+            // 亮色模式：进一步加深主体色，提高对比度
+            m_baseMat->setDiffuse(QColor(80, 90, 100));
+            m_baseMat->setAmbient(QColor(70, 80, 100));
+            m_baseMat->setSpecular(QColor(50, 50, 60));
+        }
+    }
+    if (m_attLabel) {
+        if (dark) {
+            m_attLabel->setStyleSheet("color: #f0f0f0; background-color: rgba(0,0,0,120); padding:4px; font-weight:600;");
+        } else {
+            m_attLabel->setStyleSheet("color: #222; background-color: rgba(255,255,255,180); padding:4px; font-weight:600; border: 1px solid #cccccc;");
+        }
+    }
 }
 
 void MainWindow::onPacketReceived(const QByteArray &packet)
@@ -1579,13 +1661,13 @@ void MainWindow::setup3DTab()
     baseMesh->setXExtent(half * 2.0f);
     baseMesh->setYExtent(half * 2.0f);
     baseMesh->setZExtent(half * 2.0f);
-    auto baseMat = new Qt3DExtras::QPhongMaterial;
-    baseMat->setDiffuse(QColor(90, 105, 130));   // darker body for contrast
-    baseMat->setAmbient(QColor(70, 80, 100));
-    baseMat->setSpecular(QColor(180, 180, 190));
-    baseMat->setShininess(80.0f);
+    m_baseMat = new Qt3DExtras::QPhongMaterial;
+    m_baseMat->setDiffuse(QColor(90, 105, 130));   // darker body for contrast
+    m_baseMat->setAmbient(QColor(70, 80, 100));
+    m_baseMat->setSpecular(QColor(180, 180, 190));
+    m_baseMat->setShininess(80.0f);
     baseCube->addComponent(baseMesh);
-    baseCube->addComponent(baseMat);
+    baseCube->addComponent(m_baseMat);
 
     // XYZ 参考轴（红绿蓝）
     auto addAxis = [&](const QVector3D &dir, const QColor &color) {
@@ -1648,6 +1730,9 @@ void MainWindow::setup3DTab()
 
     layout->addWidget(m_attLabel, 0);
     layout->addWidget(m_3dContainer, 1);
+
+    // 应用当前主题到 3D 视图
+    applyTheme(m_darkTheme);
 }
 
 void MainWindow::updateAttitude(double rollDeg, double pitchDeg, double yawDeg)

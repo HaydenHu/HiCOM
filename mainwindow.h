@@ -125,6 +125,7 @@ private:
     mutable QStringDecoder m_textDecoder{QStringDecoder::Utf8};
     QString m_decoderName = QStringLiteral("UTF-8");
     QString m_lastAttText;
+    Qt3DExtras::QPhongMaterial* m_baseMat = nullptr;
     QQuaternion m_lastAttQuat{QQuaternion::fromEulerAngles(0, 0, 0)};
     bool m_attViewPaused = false;
     bool m_hasAttData = false;
