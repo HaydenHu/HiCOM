@@ -11,6 +11,7 @@ struct SerialSettings {
     QSerialPort::Parity parity;
     QSerialPort::StopBits stopBits;
     QSerialPort::FlowControl flowControl = QSerialPort::NoFlowControl;
+    bool dtrEnabled = false;
 };
 
 #endif // SERIALSETTINGS_H

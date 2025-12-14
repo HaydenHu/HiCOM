@@ -222,6 +222,14 @@ MainWindow::MainWindow(QWidget *parent)
             ui->sendEdit->setPlainText(plain);
         }
     });
+    connect(ui->chkDtrSend, &QCheckBox::toggled, this, [this](bool on) {
+        if (m_isPortOpen) {
+            QMetaObject::invokeMethod(m_serialWorker, "setDtr",
+                                      Qt::QueuedConnection,
+                                      Q_ARG(bool, on));
+        }
+        m_currentSettings.dtrEnabled = on;
+    });
     // ANSI 颜色开关
     m_enableAnsiColors = ui->chk_rev_ansi->isChecked();
     connect(ui->chk_rev_ansi, &QCheckBox::toggled, this, [this](bool on) {
@@ -408,6 +416,7 @@ SerialSettings MainWindow::getCurrentSerialSettings() const
     case 2: settings.flowControl = QSerialPort::SoftwareControl; break;
     default: settings.flowControl = QSerialPort::NoFlowControl; break;
     }
+    settings.dtrEnabled = (ui->chkDtrSend && ui->chkDtrSend->isChecked());
     return settings;
 }
 

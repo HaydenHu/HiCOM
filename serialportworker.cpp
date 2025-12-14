@@ -65,6 +65,9 @@ void SerialPortWorker::startPort(const SerialSettings &settings) {
         return;
     }
 
+    // DTR 只能在端口成功打开后设置，避免 "Device is not open"
+    m_serial->setDataTerminalReady(settings.dtrEnabled);
+
     m_lastSettings = settings;
     m_hasSettings = true;
 
@@ -76,6 +79,15 @@ void SerialPortWorker::startPort(const SerialSettings &settings) {
     m_processTimer->start();
     m_buffer->clear();
     emit portOpened();
+}
+
+void SerialPortWorker::setDtr(bool enabled) {
+    QMutexLocker lock(&m_mutex);
+    if (m_serial && m_serial->isOpen()) {
+        m_serial->setDataTerminalReady(enabled);
+    }
+    m_lastSettings.dtrEnabled = enabled;
+    m_hasSettings = true;
 }
 
 void SerialPortWorker::stopPort() {

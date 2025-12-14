@@ -32,6 +32,7 @@ public slots:
     void stopPort();
     void writeToPort(const QByteArray &data);
     void restartPort();
+    void setDtr(bool enabled);
 
 private slots:
     void onDataReceived();

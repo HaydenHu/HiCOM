@@ -57,13 +57,13 @@
                <item>
                 <widget class="QComboBox" name="serialCb"/>
                </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
-               <item>
-                <widget class="QLabel" name="label_2">
-                 <property name="text">
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
                   <string>波特率</string>
                  </property>
                 </widget>
@@ -298,61 +298,66 @@
             <property name="title">
              <string>接收设置</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
-             <item>
-              <layout class="QVBoxLayout" name="verticalLayout_8">
-               <item>
-                <widget class="QPushButton" name="clearBt">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>50</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>清空</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="chk_rev_ansi">
-                 <property name="text">
-                  <string>ANSI解析</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+            <layout class="QGridLayout" name="gridLayout_recv">
+             <item row="0" column="0">
+              <widget class="QPushButton" name="clearBt">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>清空</string>
+               </property>
+              </widget>
              </item>
-             <item>
-              <layout class="QVBoxLayout" name="verticalLayout">
-               <item>
-                <widget class="QCheckBox" name="chk_rev_hex">
-                 <property name="text">
-                  <string>HEX</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="chk_rev_time">
-                 <property name="text">
-                  <string>时间戳</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="chk_rev_line">
-                 <property name="text">
-                  <string>自动换行</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="chk_rev_hex">
+               <property name="text">
+                <string>HEX</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QCheckBox" name="chk_rev_ansi">
+               <property name="text">
+                <string>ANSI解析</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QCheckBox" name="chk_rev_time">
+               <property name="text">
+                <string>时间戳</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <spacer name="verticalSpacer_recv">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="2" column="1">
+              <widget class="QCheckBox" name="chk_rev_line">
+               <property name="text">
+                <string>自动换行</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -362,64 +367,63 @@
             <property name="title">
              <string>发送设置</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_7">
-             <item>
-              <layout class="QVBoxLayout" name="verticalLayout_4">
-               <item>
-                <widget class="QPushButton" name="btnClearSend">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>50</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>清空</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QSpinBox" name="txtSendMs">
-                 <property name="maximum">
-                  <number>360000</number>
-                 </property>
-                 <property name="value">
-                  <number>200</number>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+            <layout class="QGridLayout" name="gridLayout_send">
+             <item row="0" column="0">
+              <widget class="QPushButton" name="btnClearSend">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>清空</string>
+               </property>
+              </widget>
              </item>
-             <item>
-              <layout class="QVBoxLayout" name="verticalLayout_3">
-               <item>
-                <widget class="QCheckBox" name="chk_send_hex">
-                 <property name="text">
-                  <string>HEX</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="chkTimSend">
-                 <property name="text">
-                  <string>自动发送ms</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="chk_send_line">
-                 <property name="text">
-                  <string>发送新行</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="chk_send_hex">
+               <property name="text">
+                <string>HEX</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QSpinBox" name="txtSendMs">
+               <property name="maximum">
+                <number>360000</number>
+               </property>
+               <property name="value">
+                <number>200</number>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QCheckBox" name="chkTimSend">
+               <property name="text">
+                <string>自动发送ms</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QCheckBox" name="chkDtrSend">
+               <property name="text">
+                <string>DTR</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QCheckBox" name="chk_send_line">
+               <property name="text">
+                <string>发送新行</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
