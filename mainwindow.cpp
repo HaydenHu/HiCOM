@@ -115,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_recvSearchPanel->setVisible(false);
     }
     m_enableDebug = (ENABLE_DEBUG_LOG != 0);
+    resetDecoderFromUi();
     updateStatusLabels();
     ui->statusbar->addWidget(m_statusConn);
     ui->statusbar->addWidget(m_statusMatch, 1);
@@ -145,7 +146,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_recvAutoFollow = true;
         m_rxBytes = 0;
         updateStatusLabels();
-        m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
+        resetDecoderFromUi();
         m_hasAttData = false;
         m_recvLineBuffer.clear();
         m_lastRecvFlushMs = 0;
@@ -234,6 +235,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_enableAnsiColors = ui->chk_rev_ansi->isChecked();
     connect(ui->chk_rev_ansi, &QCheckBox::toggled, this, [this](bool on) {
         m_enableAnsiColors = on;
+    });
+    connect(ui->comboEncoding, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int){
+        resetDecoderFromUi();
     });
     connect(ui->txtSendMs, qOverload<int>(&QSpinBox::valueChanged), this, [this](int v) {
         if (m_autoSend) {
@@ -459,6 +463,26 @@ void MainWindow::processWriteQueue()
     QMetaObject::invokeMethod(this, [this]() { processWriteQueue(); }, Qt::QueuedConnection);
 }
 
+void MainWindow::resetDecoderFromUi()
+{
+    QString name = QStringLiteral("UTF-8");
+    if (ui->comboEncoding) {
+        name = ui->comboEncoding->currentText();
+    }
+    m_decoderName = name;
+    if (name.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
+        m_textDecoder = QStringDecoder(QStringConverter::Utf8);
+    } else if (name.compare(QStringLiteral("GBK"), Qt::CaseInsensitive) == 0
+               || name.compare(QStringLiteral("GB18030"), Qt::CaseInsensitive) == 0) {
+        m_textDecoder = QStringDecoder("GB18030");
+    } else if (name.compare(QStringLiteral("本地编码")) == 0
+               || name.compare(QStringLiteral("Local")) == 0) {
+        m_textDecoder = QStringDecoder(QStringConverter::System);
+    } else {
+        m_textDecoder = QStringDecoder(QStringConverter::Utf8);
+    }
+}
+
 void MainWindow::onPacketReceived(const QByteArray &packet)
 {
     QVector<double> waveValues;
@@ -593,7 +617,7 @@ void MainWindow::onPortOpened()
     m_isPortOpen = true;
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
-    m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
+    resetDecoderFromUi();
     m_hasAttData = false;
     m_recvLineBuffer.clear();
     m_lastRecvFlushMs = 0;
@@ -625,7 +649,7 @@ void MainWindow::onPortClosed()
     m_isPortOpen = false;
     m_recvAutoFollow = true;
     m_inRecvAppend = false;
-    m_utf8Decoder = QStringDecoder(QStringDecoder::Utf8);
+    resetDecoderFromUi();
     m_hasAttData = false;
     m_recvLineBuffer.clear();
     m_lastRecvFlushMs = 0;
@@ -956,7 +980,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 QString MainWindow::decodeTextSmart(const QByteArray &data) const
 {
     // Streamed UTF-8 decoder to handle split packets without回退到本地编码
-    QString out = m_utf8Decoder.decode(data);
+    QString out = m_textDecoder.decode(data);
     return out;
 }
 

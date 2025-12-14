@@ -119,7 +119,8 @@ private:
     QToolButton* m_recvSearchClose = nullptr;
     QToolButton* m_recvSearchNext = nullptr;
     QToolButton* m_recvSearchPrev = nullptr;
-    mutable QStringDecoder m_utf8Decoder{QStringDecoder::Utf8};
+    mutable QStringDecoder m_textDecoder{QStringDecoder::Utf8};
+    QString m_decoderName = QStringLiteral("UTF-8");
     QString m_lastAttText;
     QQuaternion m_lastAttQuat{QQuaternion::fromEulerAngles(0, 0, 0)};
     bool m_attViewPaused = false;
@@ -144,6 +145,7 @@ private:
     void checkPortHotplug();
     void saveLogs();
     QString decodeTextSmart(const QByteArray& data) const;
+    void resetDecoderFromUi();
     void setupWaveformTab();
     void updateWaveform(const QVector<QPointF>& points);
     void updateWaveformValues(const QVector<double>& values);
