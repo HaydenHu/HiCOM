@@ -19,6 +19,7 @@
 #include <QToolButton>
 #include <QShortcut>
 #include <QStringDecoder>
+#include <QApplication>
 #include <QPoint>
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
@@ -119,6 +120,8 @@ private:
     QToolButton* m_recvSearchClose = nullptr;
     QToolButton* m_recvSearchNext = nullptr;
     QToolButton* m_recvSearchPrev = nullptr;
+    QToolButton* m_themeBtn = nullptr;
+    bool m_darkTheme = true;
     mutable QStringDecoder m_textDecoder{QStringDecoder::Utf8};
     QString m_decoderName = QStringLiteral("UTF-8");
     QString m_lastAttText;
@@ -146,6 +149,7 @@ private:
     void saveLogs();
     QString decodeTextSmart(const QByteArray& data) const;
     void resetDecoderFromUi();
+    void applyTheme(bool dark);
     void setupWaveformTab();
     void updateWaveform(const QVector<QPointF>& points);
     void updateWaveformValues(const QVector<double>& values);

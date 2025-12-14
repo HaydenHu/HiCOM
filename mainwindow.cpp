@@ -329,6 +329,18 @@ MainWindow::MainWindow(QWidget *parent)
     m_formatBtn->setFixedSize(24, 24);
     connect(m_formatBtn, &QToolButton::clicked, this, &MainWindow::openFormatDialog);
 
+    // 主题切换按钮（月亮/太阳）
+    m_themeBtn = new QToolButton(this);
+    m_themeBtn->setText(QString::fromUtf8(u8"🌙"));
+    m_themeBtn->setToolTip(QString::fromUtf8(u8"切换明暗主题"));
+    m_themeBtn->setAutoRaise(true);
+    m_themeBtn->setFixedSize(24, 24);
+    connect(m_themeBtn, &QToolButton::clicked, this, [this]() {
+        m_darkTheme = !m_darkTheme;
+        applyTheme(m_darkTheme);
+        m_themeBtn->setText(QString::fromUtf8(m_darkTheme ? u8"🌙" : u8"☀"));
+    });
+
     // 右上角工具栏：搜索 + 格式按钮
     if (ui->tabWidget) {
         QWidget* corner = new QWidget(this);
@@ -336,12 +348,15 @@ MainWindow::MainWindow(QWidget *parent)
         cornerLayout->setContentsMargins(0, 0, 0, 0);
         cornerLayout->setSpacing(4);
         cornerLayout->addWidget(m_recvSearchPanel);
+        cornerLayout->addWidget(m_themeBtn);
         cornerLayout->addWidget(m_formatBtn);
         ui->tabWidget->setCornerWidget(corner, Qt::TopRightCorner);
     } else {
         ui->statusbar->addPermanentWidget(m_recvSearchPanel);
+        ui->statusbar->addPermanentWidget(m_themeBtn);
         ui->statusbar->addPermanentWidget(m_formatBtn);
     }
+    applyTheme(m_darkTheme);
 
     setup3DTab();
 }
@@ -481,6 +496,37 @@ void MainWindow::resetDecoderFromUi()
     } else {
         m_textDecoder = QStringDecoder(QStringConverter::Utf8);
     }
+}
+
+void MainWindow::applyTheme(bool dark)
+{
+    QPalette pal;
+    if (dark) {
+        pal.setColor(QPalette::Window, QColor(32, 32, 32));
+        pal.setColor(QPalette::WindowText, QColor(230, 230, 230));
+        pal.setColor(QPalette::Base, QColor(24, 24, 24));
+        pal.setColor(QPalette::AlternateBase, QColor(38, 38, 38));
+        pal.setColor(QPalette::Text, QColor(230, 230, 230));
+        pal.setColor(QPalette::Button, QColor(45, 45, 45));
+        pal.setColor(QPalette::ButtonText, QColor(230, 230, 230));
+        pal.setColor(QPalette::Highlight, QColor(0, 122, 204));
+        pal.setColor(QPalette::HighlightedText, Qt::white);
+    } else {
+        pal = QApplication::style()->standardPalette();
+        // 提升亮色模式的对比度和边框可见度
+        pal.setColor(QPalette::Base, QColor(247, 247, 247));
+        pal.setColor(QPalette::AlternateBase, QColor(236, 236, 236));
+        pal.setColor(QPalette::Text, QColor(20, 20, 20));
+        pal.setColor(QPalette::Window, QColor(244, 244, 244));
+        pal.setColor(QPalette::Button, QColor(235, 235, 235));
+        pal.setColor(QPalette::ButtonText, QColor(20, 20, 20));
+        pal.setColor(QPalette::Highlight, QColor(0, 120, 215));
+        pal.setColor(QPalette::HighlightedText, QColor(255, 255, 255));
+        pal.setColor(QPalette::Mid, QColor(200, 200, 200)); // 边框阴影
+    }
+    qApp->setPalette(pal);
+
+
 }
 
 void MainWindow::onPacketReceived(const QByteArray &packet)
